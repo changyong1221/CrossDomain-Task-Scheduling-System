@@ -21,6 +21,7 @@ class Machine(object):
         """Add task run instance to task_waiting_queue
         """
         self.task_waiting_queue.append(task)
+        print(f"task({task.task_id}) ---> machine({self.machine_id})")
 
     def execute_tasks(self):
         """Execute tasks in the task_waiting_queue

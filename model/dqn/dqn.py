@@ -92,7 +92,7 @@ class DQN(object):
             # 原始方式，直接根据最大值选择动作
             actions = torch.max(actions_value, 1)[1].data.numpy()
             # print("actions_value: ", actions_value)
-            print("epsilon actions: ", actions)
+            # print("epsilon actions: ", actions)
             '''
             # Boltzmann动作选择策略，按概率选择动作
             actions_pro_value = torch.softmax(actions_value, dim=1).data.numpy()  # softmax 计算概率，softmax先取exp，然后求总和的百分比，解决了负数抵消的问题
@@ -112,7 +112,7 @@ class DQN(object):
         else:
             # 范围：[low,high),随机选择，虚拟机编号1到self.vms+1，共n_actions个任务
             actions = np.random.randint(0, self.vms, size=len(s_list))
-            print("random actions: ", actions)
+            # print("random actions: ", actions)
 
         # 后面的代码增加分配VM的合理性
         adict = {}
@@ -124,7 +124,7 @@ class DQN(object):
                 adict[num] += 1
             else:
                 adict[num] += 1
-        print("final actions: ", actions)
+        # print("final actions: ", actions)
         return actions
 
     # Prioritized DQN专用函数

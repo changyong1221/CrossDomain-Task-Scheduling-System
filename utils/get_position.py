@@ -42,5 +42,5 @@ def compute_distance(address1, address2):
 
 
 if __name__ == "__main__":
-    print(compute_distance("北京市", "莫斯科"))
-    # print(geocode("悉尼"))
+    # print(compute_distance("北京市", "莫斯科"))
+    print(get_position_by_name("北京市"))

@@ -19,6 +19,16 @@ def compute_avg_task_process_time():
     print(f"DQN_process_time_mean: {DQN_process_time_mean}")
 
 
+def compute_avg_task_process_time_by_name(scheduler_name):
+    """Compute average task process time of different scheduling algorightm
+    """
+    data_path = glo.results_path_list[scheduler_name]
+    data = pd.read_csv(data_path, header=None, delimiter='\t')
+    data.columns = ['task_id', 'machine_id', 'transfer_time', 'wait_time', 'execute_time', 'process_time']
+    process_time_mean = data['process_time'].mean()
+    print(f"{scheduler_name}'s average task processing time: {process_time_mean} s")
+
+
 def show_task_process_time_results():
     """Display task processing time
     """

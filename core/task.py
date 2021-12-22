@@ -55,6 +55,7 @@ class TaskRunInstance(Task):
         output_list = [self.task_id, machine.get_machine_id(), self.task_transfer_time, self.task_waiting_time,
                        self.task_executing_time, self.task_processing_time]
         write_list_to_file(output_list, output_path, mode='a+')
+        print(f"task({self.task_id}) finished, processing time: {round(self.task_processing_time, 4)} s")
 
     def get_task_processing_time(self):
         """Return task processing time

@@ -1,82 +1,63 @@
-from core.domain import create_one_domain
-from core.cluster import create_one_cluster
+from core.domain import create_domains, create_multi_domain
 from scheduler.RoundRobinScheduler import RoundRobinScheduler
 from scheduler.DQNScheduler import DQNScheduler
+from analyzer.analyzer import compute_avg_task_process_time_by_name
 from utils.load_data import load_machines_from_file, load_task_batches_from_file
 import globals.global_var as glo
-
-
-def intra_cluster_scheduling():
-    """Perform intra-domain task scheduling
-    """
-    # 1. create one domain and one cluster
-    cluster = create_one_cluster()
-
-    # 2. add machines to cluster
-    machine_file_path = glo.machine_file_path
-    machine_list = load_machines_from_file(machine_file_path)
-    for machine in machine_list:
-        cluster.add_machine(machine)
-
-    # 3. load tasks
-    task_file_path = glo.task_file_path
-    task_batch_list = load_task_batches_from_file(task_file_path)
-
-    # 4. set scheduler for cluster
-    machine_num = len(machine_list)
-    task_batch_num = len(task_batch_list)
-    scheduler = RoundRobinScheduler(len(cluster.machine_list))
-    # scheduler = DQNScheduler(machine_num, task_batch_num)
-    scheduler_name = scheduler.__class__.__name__
-    glo.task_run_results_path = glo.results_path_list[scheduler_name]
-    cluster.set_scheduler(scheduler)
-
-    # 5. commit tasks to cluster
-    for batch in task_batch_list:
-        cluster.commit_tasks(batch)
-
-    # 6. reset cluster
-    cluster.reset()
 
 
 def inter_domain_scheduling():
     """Perform inter-domain task scheduling
     """
-    # 1. create one domain
-    domain = create_one_domain()
+    # 1. create multi-domain system
+    multi_domain_system_location = "北京市"
+    multi_domain = create_multi_domain(multi_domain_system_location)
 
-    # 2. add machines to domain
+    # 2. create domains
+    domain_num = 5
+    location_list = ["北京市", "上海市", "莫斯科", "新加坡市", "吉隆坡"]
+    domain_list = create_domains(location_list)
+
+    # 3. add machines to domain
     machine_file_path = glo.machine_file_path
     machine_list = load_machines_from_file(machine_file_path)
-    for machine in machine_list:
-        domain.add_machine(machine)
+    machine_num_per = len(machine_list) // domain_num
+    for domain_id in range(domain_num):
+        for i in range(machine_num_per):
+            domain_list[domain_id].add_machine(machine_list[i + domain_id*machine_num_per])
 
-    # 3. clustering machines in the domain
-    cluster_num = 6
-    domain.clustering_machines(cluster_num)
+    # 4. clustering machines in each domain
+    cluster_num = 3
+    for domain in domain_list:
+        domain.clustering_machines(cluster_num)
 
-    # 4. load tasks
+    # 5. add domain to multi-domain system
+    for domain in domain_list:
+        multi_domain.add_domain(domain)
+
+    # 6. load tasks
     task_file_path = glo.task_file_path
     task_batch_list = load_task_batches_from_file(task_file_path)
 
-    # 5.
-
-    # 4. set scheduler for cluster
+    # 7. set scheduler for multi-domain system
     machine_num = len(machine_list)
     task_batch_num = len(task_batch_list)
-    scheduler = RoundRobinScheduler(len(cluster.machine_list))
+    scheduler = RoundRobinScheduler(machine_num)
     # scheduler = DQNScheduler(machine_num, task_batch_num)
     scheduler_name = scheduler.__class__.__name__
     glo.task_run_results_path = glo.results_path_list[scheduler_name]
-    cluster.set_scheduler(scheduler)
+    multi_domain.set_scheduler(scheduler)
 
-    # 5. commit tasks to cluster
+    # 8. commit tasks to multi-domain system
     for batch in task_batch_list:
-        cluster.commit_tasks(batch)
+        multi_domain.commit_tasks(batch)
 
-    # 6. reset cluster
-    cluster.reset()
+    # 9. reset multi-domain system
+    multi_domain.reset()
+
+    # 10. show statistics
+    compute_avg_task_process_time_by_name(scheduler_name)
 
 
 if __name__ == "__main__":
-    intra_cluster_scheduling()
+    inter_domain_scheduling()

@@ -71,7 +71,8 @@ def plot_vms(fileInputPath):
 
 
 if __name__ == '__main__':
-    vmNum = 10
+    # 检测负数，待实现
+    vmNum = 20
     # filePath = 'vm_normal.txt'
     filePath = 'vm_1.txt'
     create_vms_by_normal_distribution(vmNum, filePath)

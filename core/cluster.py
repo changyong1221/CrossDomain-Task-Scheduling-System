@@ -2,9 +2,10 @@ from scheduler.RoundRobinScheduler import RoundRobinScheduler
 
 
 class Cluster(object):
-    def __init__(self, cluster_id):
+    def __init__(self, domain_id, cluster_id):
         """Initialization
         """
+        self.domain_id = domain_id      # domain id
         self.cluster_id = cluster_id    # cluster id
         self.machine_list = []          # machine list
         self.idle_machine_list = []     # idle machine list
@@ -72,16 +73,16 @@ class Cluster(object):
             machine.reset()
 
 
-def create_one_cluster():
+def create_cluster(domain_id, cluster_id):
     """Create one cluster with cluster_id 0
     """
-    return Cluster(0)
+    return Cluster(domain_id, cluster_id)
 
 
-def create_clusters(cluster_num):
+def create_clusters(domain_id, cluster_num):
     """Create a cluster list
     """
     cluster_list = []
     for idx in range(cluster_num):
-        cluster_list.append(Cluster(idx))
+        cluster_list.append(Cluster(domain_id, idx))
     return cluster_list
