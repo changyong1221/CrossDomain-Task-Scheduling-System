@@ -251,8 +251,8 @@ class DQN(object):
 
         # 保存模型参数
         if self.step == self.max_step - 1:
-            torch.save(self.eval_net.state_dict(), "dqn/save/eval.pth")
-            torch.save(self.target_net.state_dict(), "dqn/save/target.pth")
+            torch.save(self.eval_net.state_dict(), "save/eval.pth")
+            torch.save(self.target_net.state_dict(), "save/target.pth")
             print("All model's parameters have been saved.")
 
         # 画图

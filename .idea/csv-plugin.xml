@@ -10,6 +10,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\analyzer\data_analyzer.py">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\core\cluster.py">
           <value>
             <Attribute>
@@ -66,6 +73,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\federated\federated_learning.py">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\globals\global_var.py">
           <value>
             <Attribute>
@@ -87,10 +101,31 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\preprocessing\data_preprocessing.py">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\results\clear_results.py">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\scheduler\DQNScheduler.py">
           <value>
             <Attribute>
               <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\utils\create_pic.py">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
@@ -102,6 +137,20 @@
           </value>
         </entry>
         <entry key="\utils\load_data.py">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\utils\read_data.py">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\utils\write_file.py">
           <value>
             <Attribute>
               <option name="separator" value="," />

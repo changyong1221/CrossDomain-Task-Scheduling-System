@@ -1,4 +1,5 @@
 from utils.write_file import write_list_to_file
+from utils.get_position import compute_distance_by_location
 import globals.global_var as glo
 
 
@@ -45,7 +46,12 @@ class TaskRunInstance(Task):
         传播时延 = 数据包大小(Mb) / 以太网链路速率(Mbps) + 传播距离(m) / 链路传播速率(m/s)
         默认链路传播速率 = 2.8 * 10^8 m/s
         """
-        self.task_transfer_time = self.size / machine.get_bandwidth() + 0
+        line_transmit_time = compute_distance_by_location(machine.longitude,
+                                                          machine.latitude,
+                                                          glo.location_longitude,
+                                                          glo.location_latitude) / glo.line_transmit_speed
+        # print(f"line_transmit_time: {line_transmit_time} s")
+        self.task_transfer_time = self.size / machine.get_bandwidth() + line_transmit_time
         self.task_waiting_time = max(0, machine.get_finish_time() - self.commit_time)
         self.task_executing_time = self.mi / (machine.get_mips() * self.cpu_utilization)
         self.task_processing_time = self.task_transfer_time + self.task_waiting_time + self.task_executing_time
@@ -54,7 +60,7 @@ class TaskRunInstance(Task):
         output_path = glo.task_run_results_path
         output_list = [self.task_id, machine.get_machine_id(), self.task_transfer_time, self.task_waiting_time,
                        self.task_executing_time, self.task_processing_time]
-        write_list_to_file(output_list, output_path, mode='a+')
+        write_list_to_file(output_list, output_path, mode='w')
         print(f"task({self.task_id}) finished, processing time: {round(self.task_processing_time, 4)} s")
 
     def get_task_processing_time(self):

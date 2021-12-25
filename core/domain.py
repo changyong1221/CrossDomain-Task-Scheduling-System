@@ -1,9 +1,10 @@
 from scheduler.RoundRobinScheduler import RoundRobinScheduler
 from utils.get_position import get_position_by_name
+import globals.global_var as glo
 
 
 class Domain(object):
-    def __init__(self, domain_id, location, longitude=None, latitude=None, auto_locate=False):
+    def __init__(self, domain_id, location, longitude=None, latitude=None, auto_locate=True):
         """Initialization
         """
         self.domain_id = domain_id
@@ -83,10 +84,13 @@ class Domain(object):
 
 
 class MultiDomain(object):
-    def __init__(self, location):
+    def __init__(self, multidomain_id, location):
         """Initialization
         """
+        self.multidomain_id = multidomain_id
         self.location = location
+        self.longitude = None
+        self.latitude = None
         self.domain_list = []       # all the domains in the multi-domain system
         self.cluster_list = []      # all the clusters in the multi-domain system
         self.machine_list = []      # all the machines in the multi-domain system
@@ -96,6 +100,11 @@ class MultiDomain(object):
         self.version = "v1.0"
         self.print_version()
         print("multi-domain scheduling system is created.")
+
+    def auto_locate(self):
+        """Auto locate the longitude and latitude
+        """
+        self.longitude, self.latitude = get_position_by_name(self.location)
 
     def add_domain(self, domain):
         """Add domain to multi-domain system
@@ -189,8 +198,11 @@ def create_domains(location_list):
     return domain_list
 
 
-def create_multi_domain(location):
-    """Create multi-domain system
+def create_multi_domain(multidomain_id, location):
+    """Create multi-domain system using singleton pattern
     """
-    multi_domain = MultiDomain(location)
+    multi_domain = MultiDomain(multidomain_id, location)
+    multi_domain.auto_locate()
+    glo.location_longitude = multi_domain.longitude
+    glo.location_latitude = multi_domain.latitude
     return multi_domain

@@ -1,3 +1,6 @@
+from utils.write_file import write_list_to_file
+from utils.file_check import check_and_build_dir
+import globals.global_var as glo
 
 
 class Machine(object):
@@ -7,6 +10,8 @@ class Machine(object):
         self.machine_id = machine_id
         self.ip_address = None      # 跟 flask客户端对应
         self.port = None            # 跟 flask客户端对应
+        self.longitude = 0
+        self.latitude = 0
         self.mips = mips
         self.memory = memory
         self.bandwidth = bandwidth
@@ -32,7 +37,20 @@ class Machine(object):
             self.realtime_cpu_utilization = task.get_task_cpu_utilization()
             self.realtime_memory_utilization = task.get_task_size() / self.memory
             self.realtime_bandwidth_utilization = 1
+            scheduler_name = glo.current_scheduler
+            output_dir = f"results/machine_status_results/{scheduler_name}"
+            check_and_build_dir(output_dir)
+            output_path = f"results/machine_status_results/{scheduler_name}/{self.machine_id}_status.txt"
+            output_list = [self.work_time, self.realtime_cpu_utilization, self.realtime_memory_utilization,
+                           self.realtime_bandwidth_utilization]
+            write_list_to_file(output_list, output_path, mode='w')
         self.task_waiting_queue.clear()
+
+    def set_location(self, longitude, latitude):
+        """Set longitude and latitude
+        """
+        self.longitude = longitude
+        self.latitude = latitude
 
     def reset(self):
         """Reset machine to initial state

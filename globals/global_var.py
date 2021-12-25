@@ -6,10 +6,31 @@
 # file path to save task run results
 results_path_list = {
     "RoundRobinScheduler": "results/task_run_results/RoundRobinScheduler_results.txt",
-    "DQNScheduler": "results/task_run_results/DQNScheduler_results.txt",
+    "DQNScheduler": "results/task_run_results/DQNScheduler_results_client_0.txt",
 }
 task_run_results_path = None
 
 # dataset path
 machine_file_path = "dataset/create/vm_1.txt"
-task_file_path = "dataset/Alibaba/Alibaba-Cluster-trace-2000.txt"
+# task_file_path = "dataset/Alibaba/Alibaba-Cluster-trace-2000.txt"
+task_file_path = "dataset/GoCJ/client/GoCJ_Dataset_2000_client_0.txt"
+
+# global location
+location_longitude = 0
+location_latitude = 0
+line_transmit_speed = 280000000
+
+geographical_location_list = {
+    "北京市": [116.41, 39.91],
+    "上海市": [121.48, 31.24],
+    "深圳市": [114.06, 22.55],
+    "莫斯科": [113.85, 23.12],
+    "新加坡市": [116.36, 39.95],
+    "吉隆坡": [104.62, 28.96]
+}
+
+
+# current scheduler name
+current_scheduler = ""
+
+
