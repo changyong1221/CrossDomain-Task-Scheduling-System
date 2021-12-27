@@ -29,6 +29,26 @@ def save_to_pic(data_dir, dest_dir, plt_config, show=False):
     plt.close()
 
 
+def save_to_pic_from_list(data_list, dest_dir, plt_config, show=False):
+    """Draw line chart from data_list
+
+    data_list format: [1.1, 1.2, 1.3, 1.4]
+
+    """
+    plt.figure(figsize=(10, 6))
+    plt.title(plt_config.title)
+    plt.xlabel(plt_config.xlabel)
+    plt.ylabel(plt_config.ylabel)
+    y_axis_data = data_list
+    num = len(y_axis_data)
+    x_axis_data = [i for i in range(num)]
+    plt.plot(x_axis_data, y_axis_data)
+    plt.savefig(dest_dir)
+    if show:
+        plt.show()
+    plt.close()
+
+
 def save_to_histogram(data_dir, dest_dir, plt_config, show=False):
     """Draw histogram
 
@@ -99,7 +119,7 @@ def save_to_histogram_from_list(data_list, dest_dir, plt_config, show=False):
     # 例：zip([1, 2, 3], [4, 5, 6])返回[(1, 4), (2, 5), (3, 6)]
     z_xy = zip(x_axis_data, y_axis_data)
     for xx, yy in z_xy:
-        plt.text(xx, yy - 3, str(round(yy, 2)) + '%', ha='center', va='bottom', fontsize=12, rotation=45)
+        plt.text(xx, yy - 3, str(round(yy, 2)), ha='center', va='bottom', fontsize=11, rotation=45)
 
     plt.savefig(dest_dir)
     if show:

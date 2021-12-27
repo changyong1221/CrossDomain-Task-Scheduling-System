@@ -1,5 +1,6 @@
 from scheduler.RoundRobinScheduler import RoundRobinScheduler
 from utils.get_position import get_position_by_name
+from utils.log import print_log
 import globals.global_var as glo
 
 
@@ -18,13 +19,13 @@ class Domain(object):
 
         if (self.longitude is None or self.latitude is None) and auto_locate:
             self.longitude, self.latitude = get_position_by_name(location)
-        print(f"domain({self.domain_id}) is created.")
+        print_log(f"domain({self.domain_id}) is created.")
 
     def add_machine(self, machine):
         """Add machine to domain
         """
         self.machine_list.append(machine)
-        print(f"machine({machine.machine_id}) is added to domain({self.domain_id})")
+        print_log(f"machine({machine.machine_id}) is added to domain({self.domain_id})")
 
     def delete_machine(self, machine):
         """Delete machine from domain
@@ -43,7 +44,7 @@ class Domain(object):
         """Commit tasks to cluster
         """
         if self.scheduler is None:
-            print(f"scheduler of domain({self.cluster_id}) is not set, use RoundRobinScheduler on default.")
+            print_log(f"scheduler of domain({self.cluster_id}) is not set, use RoundRobinScheduler on default.")
             self.set_scheduler(RoundRobinScheduler(len(self.machine_list)))
         if self.scheduler.__class__.__name__ == "RoundRobinScheduler":
             schedule_ret = self.scheduler.schedule(len(task_list))
@@ -99,7 +100,7 @@ class MultiDomain(object):
         self.is_using_clustering_optimization = False
         self.version = "v1.0"
         self.print_version()
-        print("multi-domain scheduling system is created.")
+        print_log("multi-domain scheduling system is created.")
 
     def auto_locate(self):
         """Auto locate the longitude and latitude
@@ -114,7 +115,7 @@ class MultiDomain(object):
             self.cluster_list.append(cluster)
         for machine in domain.machine_list:
             self.machine_list.append(machine)
-        print(f"domain({domain.domain_id}) is add to multi-domain scheduling system.")
+        print_log(f"domain({domain.domain_id}) is add to multi-domain scheduling system.")
 
     def delete_domain(self, domain):
         """Delete domain from multi-domain system
@@ -136,13 +137,13 @@ class MultiDomain(object):
         """Set task scheduling strategy
         """
         self.scheduler = scheduler
-        print(f"{scheduler.__class__.__name__} task scheduler is set for multi-domain scheduling system.")
+        print_log(f"{scheduler.__class__.__name__} task scheduler is set for multi-domain scheduling system.")
 
     def commit_tasks(self, task_list):
         """Commit tasks to multi-domain system
         """
         if self.scheduler is None:
-            print(f"scheduler of multidomain is not set, use RoundRobinScheduler on default.")
+            print_log(f"scheduler of multidomain is not set, use RoundRobinScheduler on default.")
             self.set_scheduler(RoundRobinScheduler(len(self.machine_list)))
         if self.scheduler.__class__.__name__ == "RoundRobinScheduler":
             schedule_ret = self.scheduler.schedule(len(task_list))
@@ -162,25 +163,25 @@ class MultiDomain(object):
     def run_tasks(self):
         """Run the committed tasks
         """
-        print("committed tasks is running...")
+        print_log("committed tasks is running...")
         for machine in self.machine_list:
-            machine.execute_tasks()
+            machine.execute_tasks(self.multidomain_id)
 
     def reset(self):
         """Reset cluster
         """
         for machine in self.machine_list:
             machine.reset()
-        print("multi-domain scheduling system is reset.")
+        print_log("multi-domain scheduling system is reset.")
 
     def print_version(self):
         """Print version at initialization
         """
-        print("--------------------------------------------------------")
-        print("|                                                      |")
-        print("|       Cross-domain task scheduling system v1.0       |")
-        print("|                                                      |")
-        print("--------------------------------------------------------")
+        print_log("--------------------------------------------------------")
+        print_log("|                                                      |")
+        print_log("|       Cross-domain task scheduling system v1.0       |")
+        print_log("|                                                      |")
+        print_log("--------------------------------------------------------")
 
 
 def create_domain(domain_id, location_name):

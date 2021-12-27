@@ -11,7 +11,7 @@ def inter_domain_scheduling():
     """
     # 1. create multi-domain system
     multi_domain_system_location = "北京市"
-    multi_domain = create_multi_domain(multi_domain_system_location)
+    multi_domain = create_multi_domain(0, multi_domain_system_location)
 
     # 2. create domains
     domain_num = 5
@@ -44,8 +44,8 @@ def inter_domain_scheduling():
     # 7. set scheduler for multi-domain system
     machine_num = len(machine_list)
     task_batch_num = len(task_batch_list)
-    # scheduler = RoundRobinScheduler(machine_num)
-    scheduler = DQNScheduler(machine_num, task_batch_num)
+    scheduler = RoundRobinScheduler(machine_num)
+    # scheduler = DQNScheduler(machine_num, task_batch_num)
     scheduler_name = scheduler.__class__.__name__
     glo.task_run_results_path = glo.results_path_list[scheduler_name]
     glo.current_scheduler = scheduler_name

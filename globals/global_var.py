@@ -5,7 +5,7 @@
 
 # file path to save task run results
 results_path_list = {
-    "RoundRobinScheduler": "results/task_run_results/RoundRobinScheduler_results.txt",
+    "RoundRobinScheduler": "results/task_run_results/RoundRobinScheduler/RoundRobinScheduler_task_run_results.txt",
     "DQNScheduler": "results/task_run_results/DQNScheduler_results_client_0.txt",
 }
 task_run_results_path = None
@@ -13,7 +13,7 @@ task_run_results_path = None
 # dataset path
 machine_file_path = "dataset/create/vm_1.txt"
 # task_file_path = "dataset/Alibaba/Alibaba-Cluster-trace-2000.txt"
-task_file_path = "dataset/GoCJ/client/GoCJ_Dataset_2000_client_0.txt"
+task_file_path = "dataset/GoCJ/GoCJ_Dataset_2000_test.txt"
 
 # global location
 location_longitude = 0
@@ -32,5 +32,14 @@ geographical_location_list = {
 
 # current scheduler name
 current_scheduler = ""
+
+# federated learning settings
+is_federated = False
+is_test = False
+federated_round = 0
+records_num = 2000
+
+# log control
+is_print_log = True
 
 

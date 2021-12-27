@@ -1,5 +1,7 @@
 from utils.write_file import write_list_to_file
 from utils.get_position import compute_distance_by_location
+from utils.file_check import check_and_build_dir
+from utils.log import print_log
 import globals.global_var as glo
 
 
@@ -40,7 +42,7 @@ class TaskRunInstance(Task):
         self.task_processing_time = 0
         self.is_done = False
 
-    def run_on_machine(self, machine):
+    def run_on_machine(self, machine, multidomain_id):
         """Run task on a specified machine
 
         传播时延 = 数据包大小(Mb) / 以太网链路速率(Mbps) + 传播距离(m) / 链路传播速率(m/s)
@@ -50,18 +52,33 @@ class TaskRunInstance(Task):
                                                           machine.latitude,
                                                           glo.location_longitude,
                                                           glo.location_latitude) / glo.line_transmit_speed
-        # print(f"line_transmit_time: {line_transmit_time} s")
+        # print_log(f"line_transmit_time: {line_transmit_time} s")
         self.task_transfer_time = self.size / machine.get_bandwidth() + line_transmit_time
         self.task_waiting_time = max(0, machine.get_finish_time() - self.commit_time)
         self.task_executing_time = self.mi / (machine.get_mips() * self.cpu_utilization)
         self.task_processing_time = self.task_transfer_time + self.task_waiting_time + self.task_executing_time
         machine.set_finish_time(self.commit_time + self.task_processing_time)
         self.is_done = True
-        output_path = glo.task_run_results_path
-        output_list = [self.task_id, machine.get_machine_id(), self.task_transfer_time, self.task_waiting_time,
-                       self.task_executing_time, self.task_processing_time]
-        write_list_to_file(output_list, output_path, mode='w')
-        print(f"task({self.task_id}) finished, processing time: {round(self.task_processing_time, 4)} s")
+        scheduler_name = glo.current_scheduler
+        if glo.is_federated:
+            output_dir = f"results/task_run_results/client-{multidomain_id}"
+            check_and_build_dir(output_dir)
+            output_path = \
+                f"results/task_run_results/client-{multidomain_id}/{scheduler_name}_task_run_results.txt"
+            if glo.is_test:
+                output_path = f"results/task_run_results/client-{multidomain_id}/" \
+                              f"{scheduler_name}_task_run_results_test.txt"
+            output_list = [self.task_id, machine.get_machine_id(), self.task_transfer_time, self.task_waiting_time,
+                           self.task_executing_time, self.task_processing_time]
+            write_list_to_file(output_list, output_path, mode='a+')
+        else:
+            output_dir = f"results/task_run_results/{scheduler_name}"
+            check_and_build_dir(output_dir)
+            output_path = f"results/task_run_results/{scheduler_name}/{scheduler_name}_task_run_results.txt"
+            output_list = [self.task_id, machine.get_machine_id(), self.task_transfer_time, self.task_waiting_time,
+                           self.task_executing_time, self.task_processing_time]
+            write_list_to_file(output_list, output_path, mode='a+')
+        print_log(f"task({self.task_id}) finished, processing time: {round(self.task_processing_time, 4)} s")
 
     def get_task_processing_time(self):
         """Return task processing time

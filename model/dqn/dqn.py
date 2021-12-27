@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import shutil
 import torch
@@ -7,6 +8,8 @@ from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 
 from model.dqn.prioritized_memory import Memory
+from utils.file_check import check_and_build_dir
+from utils.log import print_log
 
 GAMMA = 0.7  # reward discount，惩罚项
 TARGET_REPLACE_ITER = 50  # target update frequency，每过多少轮更新TargetNet
@@ -14,8 +17,10 @@ TARGET_REPLACE_ITER = 50  # target update frequency，每过多少轮更新Targe
 
 class DQN(object):
     # 每次把一个任务分配给一个虚拟机
-    def __init__(self, task_dim, vms, vm_dim, double_dqn=False, dueling_dqn=False, optimized_dqn=False,
-                 use_prioritized_memory=False):
+    def __init__(self, multidomain_id, task_dim, vms, vm_dim, vm_task_capacity,
+                 double_dqn=False, dueling_dqn=False, optimized_dqn=False,
+                 use_prioritized_memory=False, is_federated=False):
+        self.multidomain_id = multidomain_id
         self.task_dim = task_dim  # 任务维度
         self.vms = vms  # 虚拟机数量
         self.vm_dim = vm_dim  # 虚拟机维度
@@ -23,6 +28,8 @@ class DQN(object):
         self.s_task_dim = self.task_dim  # 任务状态维度
         self.s_vm_dim = self.vms * self.vm_dim  # 虚拟机状态维度
         self.a_dim = self.vms  # 动作空间：虚拟机的个数
+        self.vm_task_capacity = vm_task_capacity
+        self.machine_task_map = [0 for i in range(self.a_dim)]
 
         self.double_dqn = double_dqn  # 是否使用double dqn，默认为False
         self.dueling_dqn = dueling_dqn  # 是否使用dueling dqn，默认为False
@@ -51,6 +58,13 @@ class DQN(object):
             # summary(net_graph)
 
             self.eval_net.apply(self.weights_init)
+
+            model_file_path = f"save/global/global.pth"
+            if is_federated and os.path.exists(model_file_path):
+                weights = torch.load(model_file_path)
+                self.eval_net.load_state_dict(weights, strict=True)
+                print_log("load model finished.")
+
             self.target_net = Dueling_DQN(self.s_task_dim, self.s_vm_dim, self.a_dim)
             self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=self.lr)
 
@@ -66,6 +80,12 @@ class DQN(object):
             # summary(net_graph)
 
             self.eval_net.apply(self.weights_init)
+
+            model_file_path = f"save/global/global.pth"
+            if is_federated and os.path.exists(model_file_path):
+                weights = torch.load(model_file_path)
+                self.eval_net.load_state_dict(weights, strict=True)
+
             self.target_net = QNet_v1(self.s_task_dim, self.s_vm_dim, self.a_dim)
             self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=self.lr)
 
@@ -73,14 +93,18 @@ class DQN(object):
 
             self.loss_f = nn.MSELoss()
 
-        try:
-            shutil.rmtree('dqn/logs/')  # 递归删除文件夹
-        except:
-            print("没有发现logs文件目录")
-        self.writer = SummaryWriter("dqn/logs/")
-        dummy_input = Variable(torch.rand(5, self.s_task_dim+self.s_vm_dim))
-        with SummaryWriter(logdir="dqn/logs/graph", comment="Q_net") as w:
-            w.add_graph(self.eval_net, (dummy_input))
+        # try:
+        #     shutil.rmtree('dqn/logs/')  # 递归删除文件夹
+        # except:
+        #     print_log("没有发现logs文件目录")
+        # self.writer = SummaryWriter("dqn/logs/")
+        # dummy_input = Variable(torch.rand(5, self.s_task_dim+self.s_vm_dim))
+        # with SummaryWriter(logdir="dqn/logs/graph", comment="Q_net") as w:
+        #     w.add_graph(self.eval_net, (dummy_input))
+
+    # 保存一个初始模型
+    def save_initial_model(self, output_path):
+        torch.save(self.eval_net.state_dict(), output_path)
 
     # 多个状态传入，给每个状态选择一个动作
     def choose_action(self, s_list):
@@ -91,40 +115,47 @@ class DQN(object):
             actions_value = self.eval_net(torch.from_numpy(s_list).float())
             # 原始方式，直接根据最大值选择动作
             actions = torch.max(actions_value, 1)[1].data.numpy()
-            # print("actions_value: ", actions_value)
-            # print("epsilon actions: ", actions)
+            # print_log("actions_value: ", actions_value)
+            # print_log("epsilon actions: ", actions)
             '''
             # Boltzmann动作选择策略，按概率选择动作
             actions_pro_value = torch.softmax(actions_value, dim=1).data.numpy()  # softmax 计算概率，softmax先取exp，然后求总和的百分比，解决了负数抵消的问题
             actions = []  # action 存储action值
             indexs = [i for i in range(self.a_dim)]
-            # print("actions_pro_value:")
-            # print(actions_pro_value)
-            # print("indexs:")
-            # print(indexs)
+            # print_log("actions_pro_value:")
+            # print_log(actions_pro_value)
+            # print_log("indexs:")
+            # print_log(indexs)
 
             for line in actions_pro_value:
                 actions.append(np.random.choice(indexs, p=line.ravel()).tolist())  # 根据概率选择动作
             actions = np.array(actions)
-            # print("actions:")
-            # print(actions)
+            # print_log("actions:")
+            # print_log(actions)
             '''
         else:
             # 范围：[low,high),随机选择，虚拟机编号1到self.vms+1，共n_actions个任务
             actions = np.random.randint(0, self.vms, size=len(s_list))
-            # print("random actions: ", actions)
+            # print_log("random actions: ", actions)
 
         # 后面的代码增加分配VM的合理性
-        adict = {}
-        for i, num in enumerate(actions):
-            if num not in adict:
-                adict[num] = 1
-            elif adict[num] > 2 and np.random.uniform() < adict[num] / 4:  # 如果VM被分配的任务个数大于2，按后面的概率随机给任务分配VM
-                actions[i] = np.random.randint(self.vms)  # 范围:[0,20)
-                adict[num] += 1
-            else:
-                adict[num] += 1
-        # print("final actions: ", actions)
+        action_list = actions.tolist()
+        for i, action in enumerate(action_list):
+            while self.machine_task_map[action] + 1 > self.vm_task_capacity[action]:
+                action = np.random.randint(0, self.a_dim)
+            self.machine_task_map[action] += 1
+            action_list[i] = action
+        actions = np.array(action_list)
+        # adict = {}
+        # for i, num in enumerate(actions):
+        #     if num not in adict:
+        #         adict[num] = 1
+        #     elif adict[num] > 2 and np.random.uniform() < adict[num] / 4:  # 如果VM被分配的任务个数大于2，按后面的概率随机给任务分配VM
+        #         actions[i] = np.random.randint(self.vms)  # 范围:[0,20)
+        #         adict[num] += 1
+        #     else:
+        #         adict[num] += 1
+        # print_log("final actions: ", actions)
         return actions
 
     # Prioritized DQN专用函数
@@ -163,7 +194,7 @@ class DQN(object):
             self.eval_net.train()
             # Q预测值
             q_eval = self.eval_net(self.bstate).gather(1, self.baction)  # shape (batch, 1), gather表示获取每个维度action为下标的Q值
-            # print("q_eval: ", q_eval)
+            # print_log("q_eval: ", q_eval)
 
             self.target_net.eval()
             q_next = self.target_net(self.bstate_).detach()  # 设置 Target Net 不需要梯度
@@ -196,15 +227,15 @@ class DQN(object):
             self.eval_net.train()
             # Q预测值
             q_eval = self.eval_net(self.bstate).gather(1, self.baction)  # shape (batch, 1), gather表示获取每个维度action为下标的Q值
-            # print("self.eval_net(self.bstate): ", self.eval_net(self.bstate))
-            # print("self.eval_net(self.bstate) dim: ", self.eval_net(self.bstate).size())
+            # print_log("self.eval_net(self.bstate): ", self.eval_net(self.bstate))
+            # print_log("self.eval_net(self.bstate) dim: ", self.eval_net(self.bstate).size())
             # idx = self.baction[0].tolist()[0]
             # bs_list = self.eval_net(self.bstate).tolist()
             # val = bs_list[0][idx]
 
             self.target_net.eval()
             q_next = self.target_net(self.bstate_).detach()  # 设置 Target Net 不需要梯度
-            # print("q_next: ", q_next)
+            # print_log("q_next: ", q_next)
 
             # Q现实值
             # Tensor.view()返回的新tensor与原先的tensor共用一个内存,只是将原tensor中数据按照view(M,N)中，M行N列显示出来
@@ -215,7 +246,7 @@ class DQN(object):
             # Tensor.expand()将单个维度扩展成更大的维度，返回一个新的tensor
 
             # 将Double DQN和Vanilla DQN两种方式的Q值保存到文件中，然后画图比较
-            output_path = "result/q_value/" + ("double_dqn_q_value.txt" if self.double_dqn else "dqn_q_value.txt")
+            # output_path = "result/q_value/" + ("double_dqn_q_value.txt" if self.double_dqn else "dqn_q_value.txt")
 
             # 如果采用Double DQN的方式
             if self.double_dqn:
@@ -234,7 +265,7 @@ class DQN(object):
                 q_target = self.breward + GAMMA * q_next.max(1)[0].view(self.batch_size, 1)  # shape (batch, 1)
 
                 loss = self.loss_f(q_eval, q_target)
-                # print("loss: ", loss)
+                # print_log("loss: ", loss)
 
             # 将Q值保存到文件中
             # with open(output_path, 'a+') as f:
@@ -251,14 +282,17 @@ class DQN(object):
 
         # 保存模型参数
         if self.step == self.max_step - 1:
-            torch.save(self.eval_net.state_dict(), "save/eval.pth")
-            torch.save(self.target_net.state_dict(), "save/target.pth")
-            print("All model's parameters have been saved.")
+            model_save_dir = f"save/client-{self.multidomain_id}"
+            check_and_build_dir(model_save_dir)
+            model_save_path = f"save/client-{self.multidomain_id}/eval.pth"
+            torch.save(self.eval_net.state_dict(), model_save_path)
+            # torch.save(self.target_net.state_dict(), "save/target.pth")
+            print_log("parameters of evaluate net have been saved.")
 
         # 画图
-        if self.step % 10 == 0:
-            self.writer.add_scalar('Q-value', q_eval.detach().numpy()[0], self.step)
-            self.writer.add_scalar('Loss', loss.detach().numpy(), self.step)
+        # if self.step % 10 == 0:
+        #     self.writer.add_scalar('Q-value', q_eval.detach().numpy()[0], self.step)
+        #     self.writer.add_scalar('Loss', loss.detach().numpy(), self.step)
 
         return loss.detach().numpy()
 
@@ -318,9 +352,9 @@ class QNet_v1(nn.Module):  # 通过 s 预测出 a
         )
 
     def forward(self, x):
-        # print("type of x: ", type(x))
-        # print("dim of x: ", x.size())
-        # print("x[:1]: ", x[:1])
+        # print_log("type of x: ", type(x))
+        # print_log("dim of x: ", x.size())
+        # print_log("x[:1]: ", x[:1])
         x1 = self.layer1_task(x[:, :self.s_task_dim])  # 任务
         x2 = self.layer1_1vm(x[:, self.s_task_dim:])  # 虚拟机
         x2 = self.layer1_2vm(x2)
@@ -372,8 +406,8 @@ class Dueling_DQN(nn.Module):
         )
 
     def forward(self, x):
-        # print("type of x: ", type(x))
-        # print("dim of x: ", x.size())
+        # print_log("type of x: ", type(x))
+        # print_log("dim of x: ", x.size())
         x1 = self.layer1_task(x[:, :self.s_task_dim])  # 任务
         x2 = self.layer1_1vm(x[:, self.s_task_dim:])  # 虚拟机
         x2 = self.layer1_2vm(x2)

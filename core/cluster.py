@@ -1,4 +1,5 @@
 from scheduler.RoundRobinScheduler import RoundRobinScheduler
+from utils.log import print_log
 
 
 class Cluster(object):
@@ -34,7 +35,7 @@ class Cluster(object):
         """Commit tasks to cluster
         """
         if self.scheduler is None:
-            print(f"scheduler of cluster({self.cluster_id}) is not set, use RoundRobinScheduler on default.")
+            print_log(f"scheduler of cluster({self.cluster_id}) is not set, use RoundRobinScheduler on default.")
             self.set_scheduler(RoundRobinScheduler(len(self.machine_list)))
         if self.scheduler.__class__.__name__ == "RoundRobinScheduler":
             schedule_ret = self.scheduler.schedule(len(task_list))
@@ -57,9 +58,9 @@ class Cluster(object):
         """Run the committed tasks
         """
         if self.state == "IDLE":
-            print(f"please commit tasks to cluster({self.cluster_id}) first before running tasks!")
+            print_log(f"please commit tasks to cluster({self.cluster_id}) first before running tasks!")
         elif self.state == "RUNNING":
-            print(f"please wait for the last round finished.")
+            print_log(f"please wait for the last round finished.")
         else:
             self.state = "RUNNING"
             for machine in self.machine_list:
