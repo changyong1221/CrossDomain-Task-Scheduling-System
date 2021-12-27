@@ -85,7 +85,7 @@ def compute_task_to_machine_map():
     # path = "../results/task_run_results/RoundRobinScheduler/RoundRobinScheduler_task_run_results.txt"
     data = pd.read_csv(path, header=None, delimiter='\t')
     data.columns = ['task_id', 'machine_id', 'transfer_time', 'wait_time', 'execute_time', 'process_time']
-    test_records_num = 20000
+    test_records_num = 2000
     machine_num = 20
     total_records_num = len(data)
     epoch_num = total_records_num // test_records_num
@@ -93,9 +93,9 @@ def compute_task_to_machine_map():
     machine_assignment_list = []
     for machine_id in range(machine_num):
         machine_assignment_list.append(len(data[data['machine_id'] == machine_id]))
-    # dest_path = f"../pic/machine_assignment/RR_machine_assignment_20000.png"
+    # dest_path = f"../pic/machine_assignment/RR_machine_assignment_20machine_2000tasks.png"
     # dest_path = f"../pic/machine_assignment/DQN_machine_assignment.png"
-    dest_path = f"../pic/machine_assignment/DQN_machine_assignment_20000records.png"
+    dest_path = f"../pic/machine_assignment/DQN_machine_assignment_20machine_2000tasks.png"
     plt_config = PltConfig()
     plt_config.title = f"task to machine assignment map using DQN"
     plt_config.xlabel = "machine id"

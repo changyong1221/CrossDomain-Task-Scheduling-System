@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 # 按照vm性能正态分布生成vm
 def create_vms_by_normal_distribution(vmNum, fileOutputPath):
     # 先生成vmNum数量的正态分布随机数
-    normal_numbers = np.random.normal(loc=5000, scale=2000, size=vmNum)
+    normal_numbers = np.random.normal(loc=5000, scale=2500, size=vmNum)
     normal_numbers = normal_numbers.astype(int)
     normal_numbers.sort()
     print("normal_numbers: ", normal_numbers)
@@ -33,18 +33,19 @@ def plot_vms(fileInputPath):
     plt.xticks(size=8.5)
 
     # x轴数据
-    x_axis_data = ['[0,1000)', '[1000,2000)', '[2000,3000)', '[3000,4000)', '[4000,5000)', '[5000,6000)', '[6000,7000)',
-                   '[7000,8000)', '[8000,9000)', '[9000,10000)']
-    # x_axis_data = ['[0,1000)', '[1000,2000)', '[2000,3000)', '[3000,4000)', '[4000,5000)']
+    # x_axis_data = ['[0,1000)', '[1000,2000)', '[2000,3000)', '[3000,4000)', '[4000,5000)', '[5000,6000)', '[6000,7000)',
+    #                '[7000,8000)', '[8000,9000)', '[9000,10000)']
+    x_axis_data = ['[0,4000)', '[4000,8000)', '[8000,12000)', '[12000,16000)', '[16000,20000)']
     print("x_axis_data: ", x_axis_data)
+
     # y轴数据
     # 处理数据
     def getIndex(number):
         rhs = 0
         idx = -1
-        while int(number) > rhs and rhs < 10000:
+        while int(number) > rhs and rhs < 22000:
             idx += 1
-            rhs += 1000
+            rhs += 4000
         return idx
 
     y_axis_data = []
@@ -74,6 +75,6 @@ if __name__ == '__main__':
     # 检测负数，待实现
     vmNum = 20
     # filePath = 'vm_normal.txt'
-    filePath = 'vm_1.txt'
-    create_vms_by_normal_distribution(vmNum, filePath)
-    # plot_vms(filePath)
+    filePath = 'machine.txt'
+    # create_vms_by_normal_distribution(vmNum, filePath)
+    plot_vms(filePath)

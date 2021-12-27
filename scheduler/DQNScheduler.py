@@ -60,6 +60,7 @@ class DQNScheduler(Scheduler):
                                   [self.reward_all[-1 + i]], [self.state_all[-1 + i]])
 
         # 先学习一些经验，再学习
+        print("cur_step: ", self.cur_step)
         if self.cur_step > 10:
             # 截取最后10000条记录
             # print_log(type(self.state_all))

@@ -11,9 +11,9 @@ results_path_list = {
 task_run_results_path = None
 
 # dataset path
-machine_file_path = "dataset/create/vm_1.txt"
+machine_file_path = "dataset/create/machine.txt"
 # task_file_path = "dataset/Alibaba/Alibaba-Cluster-trace-2000.txt"
-task_file_path = "dataset/GoCJ/GoCJ_Dataset_20000_test.txt"
+# task_file_path = "dataset/GoCJ/GoCJ_Dataset_20000_test.txt"
 
 # global location
 location_longitude = 0

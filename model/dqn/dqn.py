@@ -142,14 +142,12 @@ class DQN(object):
         # action_list = [0 for i in range(len(s_list))]
         action_list = actions.tolist()
         for i, action in enumerate(action_list):
-            if s_list[i][0] > 150000:
-                action = np.random.randint(17, 20)
-            elif s_list[i][0] > 101000:
-                action = np.random.randint(12, 17)
+            if s_list[i][0] > 101000:
+                action = np.random.randint(14, 20)
             elif s_list[i][0] > 59000:
-                action = np.random.randint(6, 12)
+                action = np.random.randint(6, 18)
             else:
-                action = np.random.randint(0, 6)
+                action = np.random.randint(0, 7)
             # while self.machine_task_map[action] + 1 > self.vm_task_capacity[action]:
             #     action = np.random.randint(0, self.a_dim)
             # self.machine_task_map[action] += 1
