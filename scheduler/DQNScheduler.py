@@ -43,7 +43,8 @@ class DQNScheduler(Scheduler):
     def learn(self, task_instance_batch, machines_id):
         for idx, task in enumerate(task_instance_batch):  # 便历新提交的一批任务，记录动作和奖励
             self.action_all.append([machines_id[idx]])
-            reward = task.get_task_mi() / task.get_task_processing_time() / 100
+            # reward = task.get_task_mi() / task.get_task_processing_time() / 100
+            reward = task.get_task_mi() / task.get_task_processing_time()
             self.reward_all.append([reward])  # 计算奖励
 
         # 减少存储数据量

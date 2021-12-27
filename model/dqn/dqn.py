@@ -139,13 +139,23 @@ class DQN(object):
             # print_log("random actions: ", actions)
 
         # 后面的代码增加分配VM的合理性
+        # action_list = [0 for i in range(len(s_list))]
         action_list = actions.tolist()
         for i, action in enumerate(action_list):
-            while self.machine_task_map[action] + 1 > self.vm_task_capacity[action]:
-                action = np.random.randint(0, self.a_dim)
-            self.machine_task_map[action] += 1
+            if s_list[i][0] > 150000:
+                action = np.random.randint(17, 20)
+            elif s_list[i][0] > 101000:
+                action = np.random.randint(12, 17)
+            elif s_list[i][0] > 59000:
+                action = np.random.randint(6, 12)
+            else:
+                action = np.random.randint(0, 6)
+            # while self.machine_task_map[action] + 1 > self.vm_task_capacity[action]:
+            #     action = np.random.randint(0, self.a_dim)
+            # self.machine_task_map[action] += 1
             action_list[i] = action
         actions = np.array(action_list)
+
         # adict = {}
         # for i, num in enumerate(actions):
         #     if num not in adict:

@@ -23,9 +23,20 @@ def get_vm_tasks_capacity(machine_list):
     # print("total_mips: ", total_mips)
     # 计算每个机器mips占总mips的比例
     for i, machine in enumerate(machine_list):
-        vm_tasks_capacity[i] = math.ceil(((float)(machine.mips) / total_mips) * glo.test_records_num)
+        vm_tasks_capacity[i] = math.ceil(((float)(machine.mips) / total_mips) * glo.records_num)
     # print("vm_tasks_capacity: ", vm_tasks_capacity)
     return vm_tasks_capacity
+
+
+# 建立任务到机器的哈希映射
+# 参数：最低任务mi，最高任务mi，性能排序的machine_list
+def get_task_to_machine_map(machine_list):
+    # 1. settings
+    highest_mi = 900000
+    lowest_mi = 75000
+    machine_num = len(machine_list)
+
+
 
 
 def client_train(client_id):
@@ -60,7 +71,7 @@ def client_train(client_id):
         multi_domain.add_domain(domain)
 
     # 6. load tasks
-    task_file_path = f"dataset/GoCJ/client/GoCJ_Dataset_2000_client_{client_id}.txt"
+    task_file_path = f"dataset/GoCJ/client/GoCJ_Dataset_20000_client_{client_id}.txt"
     task_batch_list = sample_tasks_from_file(task_file_path, batch_size=128, delimiter='\t')
 
     # 7. set scheduler for multi-domain system
@@ -120,7 +131,7 @@ def federated_test():
         multi_domain.add_domain(domain)
 
     # 6. load tasks
-    task_file_path = f"dataset/GoCJ/GoCJ_Dataset_2000_test.txt"
+    task_file_path = f"dataset/GoCJ/GoCJ_Dataset_20000_test.txt"
     tasks_for_test = load_tasks_from_file(task_file_path, delimiter='\t')
 
     # 7. set scheduler for multi-domain system
@@ -152,9 +163,9 @@ def test_federated():
     start_time = time.time()
     n_clients = 10
     federated_rounds = 1
-    init_federated_model()
     glo.is_federated = True
-    glo.is_print_log = True
+    glo.is_print_log = False
+    init_federated_model()
 
     # federated main
     print("federated learning start...")

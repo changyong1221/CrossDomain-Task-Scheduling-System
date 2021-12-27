@@ -38,14 +38,17 @@ def inter_domain_scheduling():
         multi_domain.add_domain(domain)
 
     # 6. load tasks
-    task_file_path = glo.task_file_path
+    # task_file_path = glo.task_file_path
+    task_file_path = f"dataset/GoCJ/GoCJ_Dataset_20000_test.txt"
     task_batch_list = load_task_batches_from_file(task_file_path, delimiter='\t')
 
     # 7. set scheduler for multi-domain system
     machine_num = len(machine_list)
     task_batch_num = len(task_batch_list)
-    scheduler = RoundRobinScheduler(machine_num)
-    # scheduler = DQNScheduler(machine_num, task_batch_num)
+    # scheduler = RoundRobinScheduler(machine_num)
+    vm_task_capacity = []
+    scheduler = DQNScheduler(multi_domain.multidomain_id, machine_num, task_batch_num, vm_task_capacity,
+                             is_federated=False)
     scheduler_name = scheduler.__class__.__name__
     glo.task_run_results_path = glo.results_path_list[scheduler_name]
     glo.current_scheduler = scheduler_name

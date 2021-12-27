@@ -21,7 +21,7 @@ def load_tasks_from_file(file_path, delimiter='\t'):
     return task_list
 
 
-def sample_tasks_from_file(file_path, batch_size=32, delimiter='\t'):
+def sample_tasks_from_file(file_path, batch_size=400, delimiter='\t'):
     """Load tasks from a given file
 
     Task dataset in the file should satisfy the following format in each line:

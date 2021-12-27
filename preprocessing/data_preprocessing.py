@@ -14,7 +14,7 @@ def create_whole_gocj(records_num, output_path):
     data_categories_list = read_line_elem_from_file(file_path)
     data_categories_num = len(data_categories_list)
     data_vector = []
-    tasks_concurrency = 1
+    tasks_concurrency = 20
 
     cpu_uti_range_list = [1.0, 0.8, 0.6, 0.4, 0.2]
     mi_range_list = [525000, 150000, 101000, 59000, 15000]
@@ -45,7 +45,7 @@ def create_non_iid_data_gocj(clients_num):
     file_path = "../dataset/GoCJ/Original_DataSet.txt"
     data_categories_list = read_line_elem_from_file(file_path)
     data_categories_num = len(data_categories_list)
-    tasks_concurrency = 1
+    tasks_concurrency = 20
 
     cpu_uti_range_list = [1.0, 0.8, 0.6, 0.4, 0.2]
     mi_range_list = [525000, 150000, 101000, 59000, 15000]
@@ -57,7 +57,7 @@ def create_non_iid_data_gocj(clients_num):
                 return i
 
     client_slice_num = data_categories_num // clients_num
-    client_records_num = 2000
+    client_records_num = 20000
     for client_idx in range(clients_num):
         client_data_vector = []
         for i in range(client_records_num):
@@ -72,7 +72,7 @@ def create_non_iid_data_gocj(clients_num):
 
 def create_gocj():
     # test dataset
-    n_records = 2000
+    n_records = 20000
     output_path = f"../dataset/GoCJ/GoCJ_Dataset_{n_records}_test.txt"
     create_whole_gocj(n_records, output_path)
 
@@ -83,8 +83,8 @@ def create_gocj():
 
 
 if __name__ == '__main__':
-    # n_clients = 10
-    # create_non_iid_data_gocj(n_clients)
+    n_clients = 10
+    create_non_iid_data_gocj(n_clients)
 
-    create_gocj()
+    # create_gocj()
 

@@ -61,15 +61,16 @@ def analyze_machine_results():
 def compute_avg_task_process_time():
     """Compute average task process time of different scheduling algorightm
     """
-    schedulers = ["DQNScheduler", "RoundRobinScheduler"]
+    # schedulers = ["DQNScheduler", "RoundRobinScheduler"]
     # RR_data_path = '../' + glo.results_path_list[schedulers[1]]
     # RR_data = pd.read_csv(RR_data_path, header=None, delimiter='\t')
     # RR_data.columns = ['task_id', 'machine_id', 'transfer_time', 'wait_time', 'execute_time', 'process_time']
     # RR_process_time_mean = RR_data['process_time'].mean()
     # print(f"RR_process_time_mean: {RR_process_time_mean}")
 
-    DQN_data_path = '../results/task_run_results/client-0/DQNScheduler_task_run_results.txt'
+    # DQN_data_path = '../results/task_run_results/client-0/DQNScheduler_task_run_results.txt'
     # DQN_data_path = '../results/task_run_results/client-10000/DQNScheduler_task_run_results_test.txt'
+    DQN_data_path = '../results/task_run_results/DQNScheduler/DQNScheduler_task_run_results.txt'
     DQN_data = pd.read_csv(DQN_data_path, header=None, delimiter='\t')
     DQN_data.columns = ['task_id', 'machine_id', 'transfer_time', 'wait_time', 'execute_time', 'process_time']
     DQN_process_time_mean = DQN_data['process_time'].mean()
@@ -78,12 +79,13 @@ def compute_avg_task_process_time():
 
 def compute_task_to_machine_map():
     # 1. settings
-    path = "../results/task_run_results/client-0/DQNScheduler_task_run_results.txt"
+    path = "../results/task_run_results/DQNScheduler/DQNScheduler_task_run_results.txt"
+    # path = "../results/task_run_results/client-0/DQNScheduler_task_run_results.txt"
     # path = "../results/task_run_results/client-10000/DQNScheduler_task_run_results_test.txt"
     # path = "../results/task_run_results/RoundRobinScheduler/RoundRobinScheduler_task_run_results.txt"
     data = pd.read_csv(path, header=None, delimiter='\t')
     data.columns = ['task_id', 'machine_id', 'transfer_time', 'wait_time', 'execute_time', 'process_time']
-    test_records_num = 2000
+    test_records_num = 20000
     machine_num = 20
     total_records_num = len(data)
     epoch_num = total_records_num // test_records_num
@@ -91,9 +93,9 @@ def compute_task_to_machine_map():
     machine_assignment_list = []
     for machine_id in range(machine_num):
         machine_assignment_list.append(len(data[data['machine_id'] == machine_id]))
-    # dest_path = f"../pic/machine_assignment/RR_machine_assignment.png"
+    # dest_path = f"../pic/machine_assignment/RR_machine_assignment_20000.png"
     # dest_path = f"../pic/machine_assignment/DQN_machine_assignment.png"
-    dest_path = f"../pic/machine_assignment/DQN_machine_assignment_client_1.png"
+    dest_path = f"../pic/machine_assignment/DQN_machine_assignment_20000records.png"
     plt_config = PltConfig()
     plt_config.title = f"task to machine assignment map using DQN"
     plt_config.xlabel = "machine id"
