@@ -64,7 +64,7 @@ class DQN(object):
             if is_federated and os.path.exists(model_file_path):
                 weights = torch.load(model_file_path)
                 self.eval_net.load_state_dict(weights, strict=True)
-                print_log("load model finished.")
+                print("load model finished.")
 
             self.target_net = Dueling_DQN(self.s_task_dim, self.s_vm_dim, self.a_dim)
             self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=self.lr)
@@ -153,6 +153,7 @@ class DQN(object):
         #     self.machine_task_map[action] += 1
         #     action_list[i] = action
         # actions = np.array(action_list)
+        # print("actions: ", actions)
 
         # adict = {}
         # for i, num in enumerate(actions):
@@ -375,15 +376,15 @@ class QNet_v1(nn.Module):  # 通过 s 预测出 a
 class Dueling_DQN(nn.Module):
     def __init__(self, s_task_dim, s_vm_dim, a_dim):
         super(Dueling_DQN, self).__init__()
-        self.s_task_dim = s_task_dim
+        # self.s_task_dim = s_task_dim
         self.s_vm_dim = s_vm_dim
         self.action_dim = a_dim
-        self.layer1_task = nn.Sequential(  # 处理任务状态
-            nn.Linear(self.s_task_dim, 16),  # 全连接层，相当于tf.layers.dense，输入维度为3，输出维度为16，即16列
-            torch.nn.Dropout(0.2),  # Dropout层
-            nn.BatchNorm1d(16),  # 归一化层，参数为维度
-            nn.LeakyReLU(),  # 激活函数
-        )
+        # self.layer1_task = nn.Sequential(  # 处理任务状态
+        #     nn.Linear(self.s_task_dim, 16),  # 全连接层，相当于tf.layers.dense，输入维度为3，输出维度为16，即16列
+        #     torch.nn.Dropout(0.2),  # Dropout层
+        #     nn.BatchNorm1d(16),  # 归一化层，参数为维度
+        #     nn.LeakyReLU(),  # 激活函数
+        # )
         self.layer1_1vm = nn.Sequential(  # 处理虚拟机状态
             nn.Linear(self.s_vm_dim, 32),
             torch.nn.Dropout(0.2),
@@ -396,12 +397,12 @@ class Dueling_DQN(nn.Module):
             nn.BatchNorm1d(16),
             nn.LeakyReLU(),
         )
-        self.layer2 = nn.Sequential(  # 融合处理结果
-            nn.Linear(32, 16),
-            torch.nn.Dropout(0.2),
-            nn.BatchNorm1d(16),
-            nn.LeakyReLU(),
-        )
+        # self.layer2 = nn.Sequential(  # 融合处理结果
+        #     nn.Linear(32, 16),
+        #     torch.nn.Dropout(0.2),
+        #     nn.BatchNorm1d(16),
+        #     nn.LeakyReLU(),
+        # )
         # self.layer3 = nn.Sequential(
         #     nn.Linear(16, a_dim)        # 输出为动作的维度
         # )
@@ -416,11 +417,11 @@ class Dueling_DQN(nn.Module):
     def forward(self, x):
         # print_log("type of x: ", type(x))
         # print_log("dim of x: ", x.size())
-        x1 = self.layer1_task(x[:, :self.s_task_dim])  # 任务
-        x2 = self.layer1_1vm(x[:, self.s_task_dim:])  # 虚拟机
-        x2 = self.layer1_2vm(x2)
-        x = torch.cat((x1, x2), dim=1)  # x1和x2以dim=1拼接，即横着拼，两个16列变成32列
-        x = self.layer2(x)
+        # x1 = self.layer1_task(x[:, :self.s_task_dim])  # 任务
+        x = self.layer1_1vm(x)  # 虚拟机
+        x = self.layer1_2vm(x)
+        # x = torch.cat((x1, x2), dim=1)  # x1和x2以dim=1拼接，即横着拼，两个16列变成32列
+        # x = self.layer2(x2)
         # x = self.layer3(x)
         advantage = self.fc_advantage(x)
         value = self.fc_value(x).expand(x.size(0), self.action_dim)

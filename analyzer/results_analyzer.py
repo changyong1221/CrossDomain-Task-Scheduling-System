@@ -66,7 +66,8 @@ def compute_avg_task_process_time():
     schedulers = ["RR", "DQN"]
     data_path = [
         "../results/task_run_results/RoundRobinScheduler/RoundRobinScheduler_task_run_results.txt",
-        "../results/task_run_results/DQNScheduler/DQNScheduler_task_run_results.txt",
+        # "../results/task_run_results/DQNScheduler/DQNScheduler_task_run_results.txt",
+        "../results/task_run_results/client-0/DQNScheduler_task_run_results_test.txt",
     ]
     data_path = data_path[idx]
     data = pd.read_csv(data_path, header=None, delimiter='\t')
@@ -94,8 +95,8 @@ def compute_task_to_machine_map():
     schedulers = ["RR", "DQN"]
     data_path = [
         "../results/task_run_results/RoundRobinScheduler/RoundRobinScheduler_task_run_results.txt",
-        "../results/task_run_results/DQNScheduler/DQNScheduler_task_run_results.txt",
-        # "../results/task_run_results/client-10000/DQNScheduler_task_run_results_test.txt"
+        # "../results/task_run_results/DQNScheduler/DQNScheduler_task_run_results.txt",
+        "../results/task_run_results/client-0/DQNScheduler_task_run_results_test.txt"
     ]
     path = data_path[idx]
     data = pd.read_csv(path, header=None, delimiter='\t')
@@ -169,5 +170,5 @@ def show_machine_utilization_std():
 if __name__ == '__main__':
     # analyze_task_results()
     # analyze_machine_results()
-    # compute_avg_task_process_time()
+    compute_avg_task_process_time()
     compute_task_to_machine_map()

@@ -6,7 +6,8 @@
 # file path to save task run results
 results_path_list = {
     "RoundRobinScheduler": "results/task_run_results/RoundRobinScheduler/RoundRobinScheduler_task_run_results.txt",
-    "DQNScheduler": "results/task_run_results/DQNScheduler/DQNScheduler_task_run_results.txt",
+    # "DQNScheduler": "results/task_run_results/DQNScheduler/DQNScheduler_task_run_results.txt",
+    "DQNScheduler": "results/task_run_results/client-0/DQNScheduler_task_run_results_test.txt",
 }
 task_run_results_path = None
 
