@@ -84,8 +84,8 @@ def create_non_iid_data_gocj(clients_num):
 
 def create_gocj():
     # test dataset
-    n_records = 2000
-    output_path = f"../dataset/GoCJ/GoCJ_Dataset_{n_records}_test.txt"
+    n_records = 20000
+    output_path = f"../dataset/GoCJ/GoCJ_Dataset_{n_records}_train.txt"
     create_whole_gocj(n_records, output_path)
 
     # train dataset
@@ -95,8 +95,8 @@ def create_gocj():
 
 
 if __name__ == '__main__':
-    n_clients = 10
-    create_non_iid_data_gocj(n_clients)
+    # n_clients = 10
+    # create_non_iid_data_gocj(n_clients)
 
     create_gocj()
 

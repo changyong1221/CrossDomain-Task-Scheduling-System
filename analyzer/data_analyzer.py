@@ -100,7 +100,7 @@ def analyze_gocj_test_dataset(file_path):
 
 
 if __name__ == '__main__':
-    filepath = "../dataset/GoCJ/GoCJ_Dataset_2000_test.txt"
+    filepath = "../dataset/GoCJ/GoCJ_Dataset_20000_train.txt"
     # filepath = "../dataset/GoCJ/client/GoCJ_Dataset_2000_client_5.txt"
-    # analyze_gocj_dataset(filepath)
-    analyze_gocj_test_dataset(filepath)
+    analyze_gocj_dataset(filepath)
+    # analyze_gocj_test_dataset(filepath)

@@ -144,15 +144,15 @@ class DQN(object):
 
 
         # vm_task_capacity优化
-        action_list = actions.tolist()
-        for i, action in enumerate(action_list):
-            while self.machine_task_map[action] + 1 > self.vm_task_capacity[action]:
-                action = np.random.randint(0, self.a_dim)
-            # if s_list[i][0] > 150000:
-            #     action = np.random.randint(17, 20)
-            self.machine_task_map[action] += 1
-            action_list[i] = action
-        actions = np.array(action_list)
+        # action_list = actions.tolist()
+        # for i, action in enumerate(action_list):
+        #     while self.machine_task_map[action] + 1 > self.vm_task_capacity[action]:
+        #         action = np.random.randint(0, self.a_dim)
+        #     # if s_list[i][0] > 150000:
+        #     #     action = np.random.randint(17, 20)
+        #     self.machine_task_map[action] += 1
+        #     action_list[i] = action
+        # actions = np.array(action_list)
 
         # adict = {}
         # for i, num in enumerate(actions):
