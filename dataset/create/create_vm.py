@@ -35,7 +35,7 @@ def plot_vms(fileInputPath):
     # x轴数据
     # x_axis_data = ['[0,1000)', '[1000,2000)', '[2000,3000)', '[3000,4000)', '[4000,5000)', '[5000,6000)', '[6000,7000)',
     #                '[7000,8000)', '[8000,9000)', '[9000,10000)']
-    x_axis_data = ['[0,2000)', '[2000,8000)', '[8000,16000)', '[16000,32000)']
+    x_axis_data = ['[0,800)', '[800,2000)', '[2000, 6000)', '[6000, 12000)', '[12000, 24000)', '[24000,32000)']
     print("x_axis_data: ", x_axis_data)
 
     # y轴数据
@@ -47,14 +47,18 @@ def plot_vms(fileInputPath):
         #     idx += 1
         #     lhs += 2000
         # return idx
-        if 0 <= int(number) < 2000:
+        if 0 <= int(number) < 800:
             return 0
-        elif 2000 <= int(number) < 8000:
+        elif 800 <= int(number) < 2000:
             return 1
-        elif 8000 <= int(number) < 16000:
+        elif 2000 <= int(number) < 6000:
             return 2
-        else:
+        elif 6000 <= int(number) < 12000:
             return 3
+        elif 12000 <= int(number) < 24000:
+            return 4
+        else:
+            return 5
 
     y_axis_data = []
     for i in x_axis_data:
@@ -79,10 +83,47 @@ def plot_vms(fileInputPath):
     plt.show()
 
 
+# 画图展示vm性能分布
+def plot_all_vms(fileInputPath):
+    plt.rcParams["font.size"] = "14"
+
+    # 画布大小
+    plt.figure(figsize=(13, 6))
+
+    # 图标标题
+    plt.title("Distribution of Machine Performance")
+
+    # 设置x轴名称和y轴名称
+    plt.ylabel("numbers of machines")
+    plt.xlabel("MIPS of machines")
+
+    # 设置x轴标签
+    plt.xticks(size=8.5)
+
+    # x轴数据
+    # x_axis_data = ['[0,800)', '[800,2000)', '[2000, 6000)', '[6000, 12000)', '[12000, 24000)', '[24000,32000)']
+    # print("x_axis_data: ", x_axis_data)
+    x_axis_data = [i for i in range(20)]
+
+    # y轴数据
+    y_axis_data = []
+    with open(fileInputPath, 'r') as f:
+        for line in f:
+            y_axis_data.append(int(line.rstrip().split(',')[1]))
+    print("y_axis_data: ", y_axis_data)
+
+    plt.bar(x=x_axis_data, height=y_axis_data, width=0.9, color='slategray', alpha=0.8)
+
+    plt.tick_params(labelsize=13)
+
+    plt.show()
+
+
 if __name__ == '__main__':
     # 检测负数，待实现
     vmNum = 20
     # filePath = 'vm_normal.txt'
-    filePath = 'machine_1.txt'
+    filePath = 'machine.txt'
     # create_vms_by_normal_distribution(vmNum, filePath)
-    plot_vms(filePath)
+    # plot_vms(filePath)
+    plot_all_vms(filePath)

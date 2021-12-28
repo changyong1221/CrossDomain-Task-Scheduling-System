@@ -142,7 +142,6 @@ class DQN(object):
         # 后面的代码增加分配VM的合理性
         # action_list = [0 for i in range(len(s_list))]
 
-
         # vm_task_capacity优化
         # action_list = actions.tolist()
         # for i, action in enumerate(action_list):

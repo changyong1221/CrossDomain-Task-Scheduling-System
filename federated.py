@@ -6,7 +6,7 @@ from scheduler.RoundRobinScheduler import RoundRobinScheduler
 from scheduler.DQNScheduler import DQNScheduler
 from analyzer.results_analyzer import compute_avg_task_process_time_by_name
 from utils.load_data import load_machines_from_file, load_task_batches_from_file, sample_tasks_from_file, \
-    load_tasks_from_file
+    load_tasks_from_file, sample_task_batches_from_file
 from utils.file_check import check_and_build_dir
 import globals.global_var as glo
 
@@ -74,7 +74,7 @@ def client_train(client_id):
 
     # 6. load tasks
     task_file_path = f"dataset/GoCJ/client/GoCJ_Dataset_2000_client_{client_id}.txt"
-    task_batch_list = sample_tasks_from_file(task_file_path, batch_size=100, delimiter='\t')
+    task_batch_list = sample_task_batches_from_file(task_file_path, batch_num=400, delimiter='\t')
 
     # 7. set scheduler for multi-domain system
     machine_num = len(machine_list)
@@ -89,8 +89,8 @@ def client_train(client_id):
 
     # 8. commit tasks to multi-domain system, training
     glo.is_test = False
-    for task in task_batch_list:
-        multi_domain.commit_tasks([task])
+    for batch in task_batch_list:
+        multi_domain.commit_tasks(batch)
     # multi_domain.commit_tasks(task_batch_list)
 
     # 9. reset multi-domain system
@@ -134,7 +134,7 @@ def federated_test():
 
     # 6. load tasks
     task_file_path = f"dataset/GoCJ/GoCJ_Dataset_2000_test.txt"
-    tasks_for_test = load_tasks_from_file(task_file_path, delimiter='\t')
+    tasks_for_test = load_task_batches_from_file(task_file_path, delimiter='\t')
 
     # 7. set scheduler for multi-domain system
     machine_num = len(machine_list)
@@ -149,8 +149,8 @@ def federated_test():
 
     # 8. commit tasks to multi-domain system, training
     glo.is_test = True
-    for task in tasks_for_test:
-        multi_domain.commit_tasks([task])
+    for batch in tasks_for_test:
+        multi_domain.commit_tasks(batch)
     # multi_domain.commit_tasks(tasks_for_test)
 
     # 9. reset multi-domain system
