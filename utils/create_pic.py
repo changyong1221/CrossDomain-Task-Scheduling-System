@@ -119,7 +119,33 @@ def save_to_histogram_from_list(data_list, dest_dir, plt_config, show=False):
     # 例：zip([1, 2, 3], [4, 5, 6])返回[(1, 4), (2, 5), (3, 6)]
     z_xy = zip(x_axis_data, y_axis_data)
     for xx, yy in z_xy:
+        if yy == 0:
+            continue
         plt.text(xx, yy - 3, str(round(yy, 2)), ha='center', va='bottom', fontsize=11, rotation=45)
+        # plt.text(xx, yy - 3, str(round(yy, 2)) + '%', ha='center', va='bottom', fontsize=12, rotation=45)
+
+    plt.savefig(dest_dir)
+    if show:
+        plt.show()
+    plt.close()
+
+
+def save_to_pie_from_list(data_list, dest_dir, plt_config, show=False):
+    """Draw pie
+
+    list format: [1.1, 1.2, 1.3]
+
+    """
+    plt.figure(figsize=(10, 6))
+    plt.title(plt_config.title)
+    y_axis_data = data_list
+    labels = plt_config.labels
+
+    # 设置柱形图的柱子不同颜色，最高的柱子与最低的柱子突出显示
+    color_list = ["#d5695d", "#5d8ca8", "#65a479"]
+
+    # 画饼图
+    plt.pie(y_axis_data, labels=labels, colors=color_list, autopct='%.2f')
 
     plt.savefig(dest_dir)
     if show:

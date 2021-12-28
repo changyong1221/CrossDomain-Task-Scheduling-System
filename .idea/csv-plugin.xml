@@ -73,6 +73,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\dataset\create\machine_1.txt">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\federated.py">
           <value>
             <Attribute>

@@ -29,7 +29,7 @@ def create_whole_gocj(records_num, output_path):
         data_category = np.random.randint(data_categories_num)
         task_mi = data_categories_list[data_category]
         range_idx = find_range(mi_range_list, task_mi)
-        data_vector.append([i, i // tasks_concurrency, task_mi, cpu_uti_range_list[range_idx], task_mi // 10])
+        data_vector.append([i, (i // tasks_concurrency)*100, task_mi, cpu_uti_range_list[range_idx], task_mi // 10])
 
     write_vector_to_file(data_vector, output_path, mode='w', delimiter='\t')
 
@@ -60,12 +60,24 @@ def create_non_iid_data_gocj(clients_num):
     client_records_num = 2000
     for client_idx in range(clients_num):
         client_data_vector = []
-        for i in range(client_records_num):
-            category_id = np.random.randint(client_idx * client_slice_num, (client_idx + 1) * client_slice_num)
+        start_id = np.random.randint(0, data_categories_num - 5)
+        for i in range(0, client_records_num // 2):
+            category_id = np.random.randint(start_id, start_id + client_slice_num)
             task_mi = data_categories_list[category_id]
             range_idx = find_range(mi_range_list, task_mi)
             client_data_vector.append([i, i // tasks_concurrency, task_mi, cpu_uti_range_list[range_idx],
                                        task_mi // 10])
+        start_id = np.random.randint(0, data_categories_num - 5)
+        for i in range(client_records_num // 2, client_records_num):
+            category_id = np.random.randint(start_id, start_id + client_slice_num)
+            task_mi = data_categories_list[category_id]
+            range_idx = find_range(mi_range_list, task_mi)
+            client_data_vector.append([i, i // tasks_concurrency, task_mi, cpu_uti_range_list[range_idx],
+                                       task_mi // 10])
+        np.random.shuffle(client_data_vector)
+        for i in range(len(client_data_vector)):
+            client_data_vector[i][0] = i
+            client_data_vector[i][1] = (i // tasks_concurrency)*100
         output_path = f"../dataset/GoCJ/client/GoCJ_Dataset_{client_records_num}_client_{client_idx}.txt"
         write_vector_to_file(client_data_vector, output_path)
 
@@ -83,8 +95,8 @@ def create_gocj():
 
 
 if __name__ == '__main__':
-    # n_clients = 10
-    # create_non_iid_data_gocj(n_clients)
+    n_clients = 10
+    create_non_iid_data_gocj(n_clients)
 
     create_gocj()
 

@@ -33,7 +33,9 @@ def get_vm_tasks_capacity(machine_list):
 def get_task_to_machine_map(machine_list):
     # 1. settings
     highest_mi = 900000
-    lowest_mi = 75000
+    lowest_mi = 15000
+    task_mi_range_list = [15000, 59000, 101000, 150000, 525000]
+    task_range_num = len(task_mi_range_list)
     machine_num = len(machine_list)
 
 
@@ -71,8 +73,8 @@ def client_train(client_id):
         multi_domain.add_domain(domain)
 
     # 6. load tasks
-    task_file_path = f"dataset/GoCJ/client/GoCJ_Dataset_20000_client_{client_id}.txt"
-    task_batch_list = sample_tasks_from_file(task_file_path, batch_size=128, delimiter='\t')
+    task_file_path = f"dataset/GoCJ/client/GoCJ_Dataset_2000_client_{client_id}.txt"
+    task_batch_list = sample_tasks_from_file(task_file_path, batch_size=100, delimiter='\t')
 
     # 7. set scheduler for multi-domain system
     machine_num = len(machine_list)
@@ -131,7 +133,7 @@ def federated_test():
         multi_domain.add_domain(domain)
 
     # 6. load tasks
-    task_file_path = f"dataset/GoCJ/GoCJ_Dataset_20000_test.txt"
+    task_file_path = f"dataset/GoCJ/GoCJ_Dataset_2000_test.txt"
     tasks_for_test = load_tasks_from_file(task_file_path, delimiter='\t')
 
     # 7. set scheduler for multi-domain system
@@ -171,7 +173,7 @@ def test_federated():
     print("federated learning start...")
     for epoch in range(federated_rounds):
         glo.federated_round = epoch
-        print(f"Round {epoch}: ")
+        print(f"Round {epoch}")
         for client_id in range(n_clients):
             client_train(client_id)
         fed_avg(n_clients)

@@ -35,18 +35,26 @@ def plot_vms(fileInputPath):
     # x轴数据
     # x_axis_data = ['[0,1000)', '[1000,2000)', '[2000,3000)', '[3000,4000)', '[4000,5000)', '[5000,6000)', '[6000,7000)',
     #                '[7000,8000)', '[8000,9000)', '[9000,10000)']
-    x_axis_data = ['[0,4000)', '[4000,8000)', '[8000,12000)', '[12000,16000)', '[16000,20000)']
+    x_axis_data = ['[0,2000)', '[2000,8000)', '[8000,16000)', '[16000,32000)']
     print("x_axis_data: ", x_axis_data)
 
     # y轴数据
     # 处理数据
     def getIndex(number):
-        rhs = 0
-        idx = -1
-        while int(number) > rhs and rhs < 22000:
-            idx += 1
-            rhs += 4000
-        return idx
+        # lhs = 0
+        # idx = -1
+        # while int(number) > lhs:
+        #     idx += 1
+        #     lhs += 2000
+        # return idx
+        if 0 <= int(number) < 2000:
+            return 0
+        elif 2000 <= int(number) < 8000:
+            return 1
+        elif 8000 <= int(number) < 16000:
+            return 2
+        else:
+            return 3
 
     y_axis_data = []
     for i in x_axis_data:
@@ -75,6 +83,6 @@ if __name__ == '__main__':
     # 检测负数，待实现
     vmNum = 20
     # filePath = 'vm_normal.txt'
-    filePath = 'machine.txt'
+    filePath = 'machine_1.txt'
     # create_vms_by_normal_distribution(vmNum, filePath)
     plot_vms(filePath)

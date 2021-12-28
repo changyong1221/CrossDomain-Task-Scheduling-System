@@ -55,7 +55,8 @@ class TaskRunInstance(Task):
         # print_log(f"line_transmit_time: {line_transmit_time} s")
         self.task_transfer_time = self.size / machine.get_bandwidth() + line_transmit_time
         self.task_waiting_time = max(0, machine.get_finish_time() - self.commit_time)
-        self.task_executing_time = self.mi / (machine.get_mips() * self.cpu_utilization)
+        self.task_executing_time = self.mi / machine.get_mips()
+        # self.task_executing_time = self.mi / (machine.get_mips() * self.cpu_utilization)
         self.task_processing_time = self.task_transfer_time + self.task_waiting_time + self.task_executing_time
         machine.set_finish_time(self.commit_time + self.task_processing_time)
         self.is_done = True
@@ -68,14 +69,16 @@ class TaskRunInstance(Task):
             if glo.is_test:
                 output_path = f"results/task_run_results/client-{multidomain_id}/" \
                               f"{scheduler_name}_task_run_results_test.txt"
-            output_list = [self.task_id, machine.get_machine_id(), self.task_transfer_time, self.task_waiting_time,
+            output_list = [self.task_id, self.get_task_mi(), machine.get_machine_id(), machine.get_mips(),
+                           self.task_transfer_time, self.task_waiting_time,
                            self.task_executing_time, self.task_processing_time]
             write_list_to_file(output_list, output_path, mode='a+')
         else:
             output_dir = f"results/task_run_results/{scheduler_name}"
             check_and_build_dir(output_dir)
             output_path = f"results/task_run_results/{scheduler_name}/{scheduler_name}_task_run_results.txt"
-            output_list = [self.task_id, machine.get_machine_id(), self.task_transfer_time, self.task_waiting_time,
+            output_list = [self.task_id, self.get_task_mi(), machine.get_machine_id(), machine.get_mips(),
+                           self.task_transfer_time, self.task_waiting_time,
                            self.task_executing_time, self.task_processing_time]
             write_list_to_file(output_list, output_path, mode='a+')
         print_log(f"task({self.task_id}) finished, processing time: {round(self.task_processing_time, 4)} s")

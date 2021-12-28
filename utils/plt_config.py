@@ -9,4 +9,5 @@ class PltConfig(object):
         self.title = ""
         self.xlabel = ""
         self.ylabel = ""
-        self.x_axis_data = None
+        self.x_axis_data = None    # x轴数据
+        self.labels = None  # 饼图labels

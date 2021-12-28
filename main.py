@@ -1,9 +1,27 @@
+import math
 from core.domain import create_domains, create_multi_domain
 from scheduler.RoundRobinScheduler import RoundRobinScheduler
 from scheduler.DQNScheduler import DQNScheduler
 from analyzer.results_analyzer import compute_avg_task_process_time_by_name
 from utils.load_data import load_machines_from_file, load_task_batches_from_file
 import globals.global_var as glo
+
+
+# 根据机器性能分配任务数
+def get_vm_tasks_capacity(machine_list):
+    # 定义数组用于存储最终结果
+    vm_tasks_capacity = []
+    # 所有机器的总mips
+    total_mips = 0
+    for machine in machine_list:
+        vm_tasks_capacity.append(0)
+        total_mips += machine.mips
+    # print("total_mips: ", total_mips)
+    # 计算每个机器mips占总mips的比例
+    for i, machine in enumerate(machine_list):
+        vm_tasks_capacity[i] = math.ceil(((float)(machine.mips) / total_mips) * glo.records_num)
+    # print("vm_tasks_capacity: ", vm_tasks_capacity)
+    return vm_tasks_capacity
 
 
 def inter_domain_scheduling():
@@ -48,7 +66,7 @@ def inter_domain_scheduling():
     print("machine_num: ", machine_num)
     print("task_batch_num: ", task_batch_num)
     # scheduler = RoundRobinScheduler(machine_num)
-    vm_task_capacity = []
+    vm_task_capacity = get_vm_tasks_capacity(machine_list)
     scheduler = DQNScheduler(multi_domain.multidomain_id, machine_num, task_batch_num, vm_task_capacity,
                              is_federated=False)
     scheduler_name = scheduler.__class__.__name__

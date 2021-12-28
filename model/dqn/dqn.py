@@ -30,6 +30,7 @@ class DQN(object):
         self.a_dim = self.vms  # 动作空间：虚拟机的个数
         self.vm_task_capacity = vm_task_capacity
         self.machine_task_map = [0 for i in range(self.a_dim)]
+        self.single_machine_capacity = 2000 / 20
 
         self.double_dqn = double_dqn  # 是否使用double dqn，默认为False
         self.dueling_dqn = dueling_dqn  # 是否使用dueling dqn，默认为False
@@ -140,17 +141,16 @@ class DQN(object):
 
         # 后面的代码增加分配VM的合理性
         # action_list = [0 for i in range(len(s_list))]
+
+
+        # vm_task_capacity优化
         action_list = actions.tolist()
         for i, action in enumerate(action_list):
-            if s_list[i][0] > 101000:
-                action = np.random.randint(14, 20)
-            elif s_list[i][0] > 59000:
-                action = np.random.randint(6, 18)
-            else:
-                action = np.random.randint(0, 7)
-            # while self.machine_task_map[action] + 1 > self.vm_task_capacity[action]:
-            #     action = np.random.randint(0, self.a_dim)
-            # self.machine_task_map[action] += 1
+            while self.machine_task_map[action] + 1 > self.vm_task_capacity[action]:
+                action = np.random.randint(0, self.a_dim)
+            # if s_list[i][0] > 150000:
+            #     action = np.random.randint(17, 20)
+            self.machine_task_map[action] += 1
             action_list[i] = action
         actions = np.array(action_list)
 
