@@ -120,12 +120,12 @@ def federated_test(epoch):
     machine_kind_num_list, machine_kind_idx_range_list = get_machine_kind_list(machine_list)
     # target = 0.999879
     # rounds = 1421
-    # initial = 0.994
-    # diff = 0.999879 - 0.994 = 0.005879
+    # initial = 0.94
+    # diff = 0.999879 - 0.94 = 0.059879
     # epochs = 10
-    # inc = diff / epochs = 0.0005879
-    epsilon_inc = 0.0005879
-    epsilon_dec = 0.994 + epsilon_inc * epoch
+    # inc = diff / epochs = 0.0059879
+    epsilon_inc = 0.0059879
+    epsilon_dec = 0.94 + epsilon_inc * epoch
     scheduler = DQNScheduler(multi_domain.multidomain_id, machine_num, task_batch_num, machine_kind_num_list,
                              machine_kind_idx_range_list, is_federated=True, epsilon_decay=epsilon_dec)
     scheduler_name = scheduler.__class__.__name__
