@@ -8,40 +8,11 @@ from analyzer.results_analyzer import compute_avg_task_process_time_by_name
 from utils.load_data import load_machines_from_file, load_task_batches_from_file, sample_tasks_from_file, \
     load_tasks_from_file, sample_task_batches_from_file
 from utils.file_check import check_and_build_dir
+from utils.state_representation import get_machine_kind_list
 import globals.global_var as glo
 
 
-# 根据机器性能分配任务数
-def get_vm_tasks_capacity(machine_list):
-    # 定义数组用于存储最终结果
-    vm_tasks_capacity = []
-    # 所有机器的总mips
-    total_mips = 0
-    for machine in machine_list:
-        vm_tasks_capacity.append(0)
-        total_mips += machine.mips
-    # print("total_mips: ", total_mips)
-    # 计算每个机器mips占总mips的比例
-    for i, machine in enumerate(machine_list):
-        vm_tasks_capacity[i] = math.ceil(((float)(machine.mips) / total_mips) * glo.records_num)
-    # print("vm_tasks_capacity: ", vm_tasks_capacity)
-    return vm_tasks_capacity
-
-
-# 建立任务到机器的哈希映射
-# 参数：最低任务mi，最高任务mi，性能排序的machine_list
-def get_task_to_machine_map(machine_list):
-    # 1. settings
-    highest_mi = 900000
-    lowest_mi = 15000
-    task_mi_range_list = [15000, 59000, 101000, 150000, 525000]
-    task_range_num = len(task_mi_range_list)
-    machine_num = len(machine_list)
-
-
-
-
-def client_train(client_id):
+def client_train(client_id, epoch):
     """Perform inter-domain task scheduling
     """
     # 1. create multi-domain system
@@ -73,16 +44,20 @@ def client_train(client_id):
         multi_domain.add_domain(domain)
 
     # 6. load tasks
-    task_file_path = f"dataset/GoCJ/client/GoCJ_Dataset_2000_client_{client_id}.txt"
-    task_batch_list = sample_task_batches_from_file(task_file_path, batch_num=400, delimiter='\t')
+    # task_file_path = f"dataset/GoCJ/client/GoCJ_Dataset_2000_client_{client_id}.txt"
+    task_file_path = f"dataset/Alibaba/client/Alibaba-Cluster-trace-100000-client-{client_id}.txt"
+    # task_batch_list = load_task_batches_from_file(task_file_path, delimiter='\t')
+    task_batch_list = sample_task_batches_from_file(task_file_path, batch_num=5, delimiter='\t')
 
     # 7. set scheduler for multi-domain system
     machine_num = len(machine_list)
     task_batch_num = len(task_batch_list)
     # scheduler = RoundRobinScheduler(machine_num)
-    vm_task_capacity = get_vm_tasks_capacity(machine_list)
-    scheduler = DQNScheduler(multi_domain.multidomain_id, machine_num, task_batch_num, vm_task_capacity,
-                             is_federated=True)
+    machine_kind_num_list, machine_kind_idx_range_list = get_machine_kind_list(machine_list)
+    epsilon_inc = 0.00014
+    epsilon_dec = 0.998 + epsilon_inc * epoch
+    scheduler = DQNScheduler(multi_domain.multidomain_id, machine_num, task_batch_num, machine_kind_num_list,
+                             machine_kind_idx_range_list, is_federated=True, epsilon_decay=epsilon_dec)
     scheduler_name = scheduler.__class__.__name__
     glo.current_scheduler = scheduler_name
     multi_domain.set_scheduler(scheduler)
@@ -100,7 +75,7 @@ def client_train(client_id):
     # compute_avg_task_process_time_by_name(scheduler_name)
 
 
-def federated_test():
+def federated_test(epoch):
     """Perform inter-domain task scheduling
     """
     # 1. create multi-domain system
@@ -133,16 +108,26 @@ def federated_test():
         multi_domain.add_domain(domain)
 
     # 6. load tasks
-    task_file_path = f"dataset/GoCJ/GoCJ_Dataset_2000_test.txt"
+    # task_file_path = f"dataset/GoCJ/GoCJ_Dataset_5000records_50concurrency_test.txt"
+    task_file_path = f"dataset/Alibaba/Alibaba-Cluster-trace-100000-test.txt"
+    # task_file_path = f"dataset/Alibaba/Alibaba-Cluster-trace-5000-test.txt"
     tasks_for_test = load_task_batches_from_file(task_file_path, delimiter='\t')
 
     # 7. set scheduler for multi-domain system
     machine_num = len(machine_list)
     task_batch_num = len(tasks_for_test)
     # scheduler = RoundRobinScheduler(machine_num)
-    vm_task_capacity = get_vm_tasks_capacity(machine_list)
-    scheduler = DQNScheduler(multi_domain.multidomain_id, machine_num, task_batch_num, vm_task_capacity,
-                             is_federated=True)
+    machine_kind_num_list, machine_kind_idx_range_list = get_machine_kind_list(machine_list)
+    # target = 0.999879
+    # rounds = 1421
+    # initial = 0.994
+    # diff = 0.999879 - 0.994 = 0.005879
+    # epochs = 10
+    # inc = diff / epochs = 0.0005879
+    epsilon_inc = 0.0005879
+    epsilon_dec = 0.994 + epsilon_inc * epoch
+    scheduler = DQNScheduler(multi_domain.multidomain_id, machine_num, task_batch_num, machine_kind_num_list,
+                             machine_kind_idx_range_list, is_federated=True, epsilon_decay=epsilon_dec)
     scheduler_name = scheduler.__class__.__name__
     glo.current_scheduler = scheduler_name
     multi_domain.set_scheduler(scheduler)
@@ -164,8 +149,9 @@ def test_federated():
     # Initialization
     start_time = time.time()
     n_clients = 10
-    federated_rounds = 1
+    federated_rounds = 10
     glo.is_federated = True
+    glo.is_test = False
     glo.is_print_log = False
     init_federated_model()
 
@@ -175,9 +161,13 @@ def test_federated():
         glo.federated_round = epoch
         print(f"Round {epoch}")
         for client_id in range(n_clients):
-            client_train(client_id)
+            client_train(client_id, epoch)
         fed_avg(n_clients)
-        federated_test()
+        glo.is_test = True
+        federated_test(epoch)
+        # for i in range(10):     # test 10 times and get average
+        #     federated_test(epoch)
+        glo.is_test = False
 
     print("federated learning finished.")
     end_time = time.time()
@@ -211,9 +201,8 @@ def fed_avg(clients_num):
 
 def init_federated_model():
     machine_num = 20
-    vm_task_capacity = []
     scheduler = DQNScheduler(multidomain_id=1, machine_num=machine_num, task_batch_num=1,
-                             vm_task_capacity=vm_task_capacity,
+                             machine_kind_num_list=[], machine_kind_idx_range_list=[],
                              is_federated=False)
     global_model_dir = "save/global"
     check_and_build_dir(global_model_dir)
@@ -223,3 +212,4 @@ def init_federated_model():
 
 if __name__ == "__main__":
     test_federated()
+    # init_federated_model()

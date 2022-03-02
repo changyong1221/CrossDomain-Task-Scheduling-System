@@ -15,6 +15,11 @@ class Task(object):
         self.cpu_utilization = cpu_utilization
         self.size = size
 
+    def get_task_commit_time(self):
+        """Return task commit time
+        """
+        return self.commit_time
+
     def get_task_mi(self):
         """Return task mi of current task
         """
@@ -53,30 +58,33 @@ class TaskRunInstance(Task):
                                                           glo.location_longitude,
                                                           glo.location_latitude) / glo.line_transmit_speed
         # print_log(f"line_transmit_time: {line_transmit_time} s")
-        self.task_transfer_time = self.size / machine.get_bandwidth() + line_transmit_time
-        self.task_waiting_time = max(0, machine.get_finish_time() - self.commit_time)
-        self.task_executing_time = self.mi / machine.get_mips()
+        self.task_transfer_time = round(self.size / machine.get_bandwidth() + line_transmit_time, 4)
+        self.task_waiting_time = round(max(0, machine.get_finish_time() - self.commit_time), 4)
+        self.task_executing_time = round(self.mi / machine.get_mips(), 4)
         # self.task_executing_time = self.mi / (machine.get_mips() * self.cpu_utilization)
         self.task_processing_time = self.task_transfer_time + self.task_waiting_time + self.task_executing_time
         machine.set_finish_time(self.commit_time + self.task_processing_time)
         self.is_done = True
         scheduler_name = glo.current_scheduler
         if glo.is_federated:
-            output_dir = f"results/task_run_results/client-{multidomain_id}"
+            output_dir = f"results/task_run_results/federated/client-{multidomain_id}/{glo.federated_round}"
             check_and_build_dir(output_dir)
-            output_path = \
-                f"results/task_run_results/client-{multidomain_id}/{scheduler_name}_task_run_results.txt"
+            output_path = output_dir + f"/{scheduler_name}_task_run_results.txt"
             if glo.is_test:
-                output_path = f"results/task_run_results/client-{multidomain_id}/" \
-                              f"{scheduler_name}_task_run_results_test.txt"
+                output_dir = f"results/task_run_results/federated/federated_test/{glo.federated_round}"
+                check_and_build_dir(output_dir)
+                output_path = output_dir + f"/{scheduler_name}_task_run_results.txt"
+                # output_path = output_dir + f"/{scheduler_name}_task_run_results_test.txt"
             output_list = [self.task_id, self.get_task_mi(), machine.get_machine_id(), machine.get_mips(),
                            self.task_transfer_time, self.task_waiting_time,
                            self.task_executing_time, self.task_processing_time]
             write_list_to_file(output_list, output_path, mode='a+')
         else:
-            output_dir = f"results/task_run_results/{scheduler_name}"
+            output_dir = f"results/task_run_results/{glo.current_dataset}{glo.records_num}/{scheduler_name}/"
+            if glo.current_batch_size != 0:
+                output_dir += f"{glo.current_batch_size}/"
             check_and_build_dir(output_dir)
-            output_path = f"results/task_run_results/{scheduler_name}/{scheduler_name}_task_run_results.txt"
+            output_path = output_dir + f"{scheduler_name}_task_run_results2.txt"
             output_list = [self.task_id, self.get_task_mi(), machine.get_machine_id(), machine.get_mips(),
                            self.task_transfer_time, self.task_waiting_time,
                            self.task_executing_time, self.task_processing_time]

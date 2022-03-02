@@ -10,27 +10,27 @@ from tensorboardX import SummaryWriter
 from model.dqn.prioritized_memory import Memory
 from utils.file_check import check_and_build_dir
 from utils.log import print_log
+from utils.state_representation import balancing, get_machine_kind_idx, task_adapting
+import globals.global_var as glo
 
-GAMMA = 0.7  # reward discount，惩罚项
+GAMMA = 0.9  # reward discount，惩罚项
 TARGET_REPLACE_ITER = 50  # target update frequency，每过多少轮更新TargetNet
 
 
 class DQN(object):
     # 每次把一个任务分配给一个虚拟机
-    def __init__(self, multidomain_id, task_dim, vms, vm_dim, vm_task_capacity,
+    def __init__(self, multidomain_id, task_dim, vms, vm_dim, machine_kind_num_list, machine_kind_idx_range_list,
                  double_dqn=False, dueling_dqn=False, optimized_dqn=False,
-                 use_prioritized_memory=False, is_federated=False):
+                 use_prioritized_memory=False, is_federated=False, epsilon_decay=0.998):
         self.multidomain_id = multidomain_id
         self.task_dim = task_dim  # 任务维度
         self.vms = vms  # 虚拟机数量
+        self.vms_num = self.vms
         self.vm_dim = vm_dim  # 虚拟机维度
 
         self.s_task_dim = self.task_dim  # 任务状态维度
         self.s_vm_dim = self.vms * self.vm_dim  # 虚拟机状态维度
         self.a_dim = self.vms  # 动作空间：虚拟机的个数
-        self.vm_task_capacity = vm_task_capacity
-        self.machine_task_map = [0 for i in range(self.a_dim)]
-        self.single_machine_capacity = 2000 / 20
 
         self.double_dqn = double_dqn  # 是否使用double dqn，默认为False
         self.dueling_dqn = dueling_dqn  # 是否使用dueling dqn，默认为False
@@ -44,11 +44,25 @@ class DQN(object):
         self.lr = 0.003  # learning rate
         self.batch_size = 32  # 128
         self.epsilon = 0.95   # epsilon初始值
-        self.epsilon_decay = 0.997  # epsilon退化率
+        # self.epsilon = 0.1
+        # self.epsilon_decay = 0.998  # epsilon退化率
+        self.epsilon_decay = epsilon_decay
         self.epsilon_min = 0.1      # epsilon最小值
         self.step = 0
         self.max_step = 0
         self.target_prob = 1.0      # 学习目标算法的概率，若目标算法为fine grain，则有50%的几率在随机选择动作时以fine grain策略选择动作
+
+        # 均衡策略
+        self.machine_kind_num_list = machine_kind_num_list                  # 记录每类机器的数目
+        self.machine_kind_idx_range_list = machine_kind_idx_range_list      # 记录每类机器的索引范围
+        self.num_of_machine_kind = len(self.machine_kind_num_list)          # 按性能分类的机器种类数目
+        self.machine_task_map = [0 for i in range(self.a_dim)]              # 记录每台机器上分配的任务数
+        self.machine_kind_task_map = [0 for i in range(self.num_of_machine_kind)]   # 记录每类机器上分配的任务数
+        self.machine_kind_avg_task_map = [0 for i in range(self.num_of_machine_kind)]  # 记录每类机器上的平均分配任务数
+        self.balance_factor_max = 0.9       # 阶梯平衡因子，前一级阶梯与后一级阶梯的比值应介于平衡因子[min, max]之间
+        self.balance_factor_min = 0.85
+        self.task_affinity_factor = 0.9    # 任务亲和度，针对大任务优化，大任务对高性能机器具有更高的亲和度，该优化的优先级高于负载因子
+        self.balance_prob = 0.5     # 小于balance_prob使用任务亲和度优化，大于balance_prob使用负载均衡优化
 
         if self.dueling_dqn:
             self.eval_net = Dueling_DQN(self.s_task_dim, self.s_vm_dim, self.a_dim)
@@ -116,55 +130,122 @@ class DQN(object):
             actions_value = self.eval_net(torch.from_numpy(s_list).float())
             # 原始方式，直接根据最大值选择动作
             actions = torch.max(actions_value, 1)[1].data.numpy()
-            # print_log("actions_value: ", actions_value)
-            # print_log("epsilon actions: ", actions)
-            '''
-            # Boltzmann动作选择策略，按概率选择动作
-            actions_pro_value = torch.softmax(actions_value, dim=1).data.numpy()  # softmax 计算概率，softmax先取exp，然后求总和的百分比，解决了负数抵消的问题
-            actions = []  # action 存储action值
-            indexs = [i for i in range(self.a_dim)]
-            # print_log("actions_pro_value:")
-            # print_log(actions_pro_value)
-            # print_log("indexs:")
-            # print_log(indexs)
 
-            for line in actions_pro_value:
-                actions.append(np.random.choice(indexs, p=line.ravel()).tolist())  # 根据概率选择动作
-            actions = np.array(actions)
-            # print_log("actions:")
-            # print_log(actions)
-            '''
+            adict = {}  # 标记每个VM出现次数，实现负载均衡
+            s_task_num = len(s_list)
+
+            # # 后面的代码增加分配VM的负载均衡，也是对动作的探索，融入了轮寻算法
+            # for i in range(s_task_num):
+            #     if actions[i] not in adict:
+            #         adict[actions[i]] = 1
+            #     else:
+            #         adict[actions[i]] += 1
+            # for i in range(s_task_num):
+            #     # 如果VM被分配的任务个数大于2，按后面的概率随机给任务分配VM
+            #     if adict[actions[i]] > int(s_task_num / self.vms_num) and np.random.uniform() > 0.5:
+            #         actions[i] = np.random.randint(self.vms_num)  # randint范围: [,]
         else:
-            # 范围：[low,high),随机选择，虚拟机编号1到self.vms+1，共n_actions个任务
-            actions = np.random.randint(0, self.vms, size=len(s_list))
-            # print_log("random actions: ", actions)
-
-        # 后面的代码增加分配VM的合理性
-        # action_list = [0 for i in range(len(s_list))]
-
-        # vm_task_capacity优化
-        # action_list = actions.tolist()
-        # for i, action in enumerate(action_list):
-        #     while self.machine_task_map[action] + 1 > self.vm_task_capacity[action]:
-        #         action = np.random.randint(0, self.a_dim)
-        #     # if s_list[i][0] > 150000:
-        #     #     action = np.random.randint(17, 20)
-        #     self.machine_task_map[action] += 1
-        #     action_list[i] = action
-        # actions = np.array(action_list)
-        # print("actions: ", actions)
-
-        # adict = {}
-        # for i, num in enumerate(actions):
-        #     if num not in adict:
-        #         adict[num] = 1
-        #     elif adict[num] > 2 and np.random.uniform() < adict[num] / 4:  # 如果VM被分配的任务个数大于2，按后面的概率随机给任务分配VM
-        #         actions[i] = np.random.randint(self.vms)  # 范围:[0,20)
-        #         adict[num] += 1
-        #     else:
-        #         adict[num] += 1
-        # print_log("final actions: ", actions)
+            action_list = [0 for i in range(len(s_list))]
+            for i, action in enumerate(action_list):
+                if np.random.random() < self.balance_prob:
+                    if np.random.random() < self.task_affinity_factor:
+                        action = task_adapting(s_list[i], self.num_of_machine_kind, self.machine_kind_idx_range_list)
+                else:
+                    action = balancing(self.machine_kind_avg_task_map, self.num_of_machine_kind,
+                                       self.machine_kind_idx_range_list, self.balance_factor_min,
+                                       self.balance_factor_max)
+                action_list[i] = action
+                self.machine_task_map[action] += 1
+                kind_idx = get_machine_kind_idx(action, self.num_of_machine_kind, self.machine_kind_idx_range_list)
+                self.machine_kind_task_map[kind_idx] += 1
+                self.machine_kind_avg_task_map[kind_idx] = self.machine_kind_task_map[kind_idx] / \
+                                                           self.machine_kind_num_list[kind_idx]
+            actions = np.array(action_list)
         return actions
+
+
+    # # 多个状态传入，给每个状态选择一个动作
+    # def choose_action(self, s_list):
+    #     if self.epsilon > self.epsilon_min:  # epsilon最小值
+    #         self.epsilon *= self.epsilon_decay
+    #     if np.random.uniform() > self.epsilon:  # np.random.uniform()输出0到1之间的一个随机数
+    #         self.eval_net.eval()    # 进入evaluate模式，区别于train模式，在eval模式，框架会自动把BatchNormalize和Dropout固定住，不会取平均，而是用训练好的值
+    #         actions_value = self.eval_net(torch.from_numpy(s_list).float())
+    #         # 原始方式，直接根据最大值选择动作
+    #         actions = torch.max(actions_value, 1)[1].data.numpy()
+    #         print("epsilon actions: ", actions)
+    #         # print("actions_value: ", actions_value)
+    #         # print("torch.max(actions_value, 1): ", torch.max(actions_value, 1))
+    #         # print("torch.max(actions_value, 1)[1]: ", torch.max(actions_value, 1)[1])
+    #         # print("torch.max(actions_value, 1)[1].data: ", torch.max(actions_value, 1)[1].data)
+    #         # print("torch.max(actions_value, 1)[1].data.numpy(): ", torch.max(actions_value, 1)[1].data.numpy())
+    #         # if self.step == 200:
+    #         #     exit()
+    #         '''
+    #         # Boltzmann动作选择策略，按概率选择动作
+    #         actions_pro_value = torch.softmax(actions_value, dim=1).data.numpy()  # softmax 计算概率，softmax先取exp，然后求总和的百分比，解决了负数抵消的问题
+    #         actions = []  # action 存储action值
+    #         indexs = [i for i in range(self.a_dim)]
+    #         # print_log("actions_pro_value:")
+    #         # print_log(actions_pro_value)
+    #         # print_log("indexs:")
+    #         # print_log(indexs)
+    #
+    #         for line in actions_pro_value:
+    #             actions.append(np.random.choice(indexs, p=line.ravel()).tolist())  # 根据概率选择动作
+    #         actions = np.array(actions)
+    #         # print_log("actions:")
+    #         # print_log(actions)
+    #         '''
+    #     else:
+    #         action_list = [0 for i in range(len(s_list))]
+    #         for i, action in enumerate(action_list):
+    #             if np.random.random() < self.balance_prob:
+    #                 if np.random.random() < self.task_affinity_factor:
+    #                     action = task_adapting(s_list[i], self.num_of_machine_kind, self.machine_kind_idx_range_list)
+    #             else:
+    #                 action = balancing(self.machine_kind_avg_task_map, self.num_of_machine_kind,
+    #                                    self.machine_kind_idx_range_list, self.balance_factor_min,
+    #                                    self.balance_factor_max)
+    #             # if s_list[i][0] > 150000:
+    #             #     action = np.random.randint(17, 20)
+    #             action_list[i] = action
+    #             self.machine_task_map[action] += 1
+    #             kind_idx = get_machine_kind_idx(action, self.num_of_machine_kind, self.machine_kind_idx_range_list)
+    #             self.machine_kind_task_map[kind_idx] += 1
+    #             self.machine_kind_avg_task_map[kind_idx] = self.machine_kind_task_map[kind_idx] / \
+    #                                                        self.machine_kind_num_list[kind_idx]
+    #         actions = np.array(action_list)
+    #         print("actions: ", actions)
+    #
+    #     # 后面的代码增加分配VM的合理性
+    #     # action_list = [0 for i in range(len(s_list))]
+    #
+    #     # vm_task_capacity优化
+    #     # if not glo.is_test:
+    #     #     action_list = actions.tolist()
+    #     #     for i, action in enumerate(action_list):
+    #     #         while self.machine_task_map[action] + 1 > self.vm_task_capacity[action]:
+    #     #             action = np.random.randint(0, self.a_dim)
+    #     #         if s_list[i][0] > 150000:
+    #     #             action = np.random.randint(18, 20)
+    #     #         self.machine_task_map[action] += 1
+    #     #         action_list[i] = action
+    #     #     actions = np.array(action_list)
+    #     #     print("actions: ", actions)
+    #
+    #     adict = {}
+    #     for i, num in enumerate(actions):
+    #         if num not in adict:
+    #             adict[num] = 1
+    #         elif adict[num] > 2 and np.random.uniform() < adict[num] / 4:  # 如果VM被分配的任务个数大于2，按后面的概率随机给任务分配VM
+    #             actions[i] = np.random.randint(self.vms)  # 范围:[0,20)
+    #             adict[num] += 1
+    #         else:
+    #             adict[num] += 1
+    #     print("final actions: ", actions)
+    #     return actions
+
 
     # Prioritized DQN专用函数
     # save sample (error,<s,a,r,s'>) to the replay memory
@@ -375,55 +456,98 @@ class QNet_v1(nn.Module):  # 通过 s 预测出 a
 class Dueling_DQN(nn.Module):
     def __init__(self, s_task_dim, s_vm_dim, a_dim):
         super(Dueling_DQN, self).__init__()
-        # self.s_task_dim = s_task_dim
-        self.s_vm_dim = s_vm_dim
+        self.s_task_dim = s_task_dim
         self.action_dim = a_dim
-        # self.layer1_task = nn.Sequential(  # 处理任务状态
-        #     nn.Linear(self.s_task_dim, 16),  # 全连接层，相当于tf.layers.dense，输入维度为3，输出维度为16，即16列
-        #     torch.nn.Dropout(0.2),  # Dropout层
-        #     nn.BatchNorm1d(16),  # 归一化层，参数为维度
-        #     nn.LeakyReLU(),  # 激活函数
-        # )
+        self.s_vm_dim = s_vm_dim
+        self.layer1_task = nn.Sequential(  # 处理任务状态
+            nn.Linear(self.s_task_dim, 32),  # 全连接层，相当于tf.layers.dense，输入维度为3，输出维度为16，即16列
+            torch.nn.Dropout(0.2),  # Dropout层
+            nn.BatchNorm1d(32),  # 归一化层，参数为维度
+            nn.LeakyReLU(),  # 激活函数
+        )
         self.layer1_1vm = nn.Sequential(  # 处理虚拟机状态
-            nn.Linear(self.s_vm_dim, 32),
+            nn.Linear(self.s_vm_dim, 64),
+            torch.nn.Dropout(0.2),
+            nn.BatchNorm1d(64),
+            nn.LeakyReLU(),
+        )
+        self.layer1_2vm = nn.Sequential(
+            nn.Linear(64, 32),
             torch.nn.Dropout(0.2),
             nn.BatchNorm1d(32),
             nn.LeakyReLU(),
         )
-        self.layer1_2vm = nn.Sequential(
-            nn.Linear(32, 16),
+        self.layer2 = nn.Sequential(  # 融合处理结果
+            nn.Linear(64, 32),
             torch.nn.Dropout(0.2),
-            nn.BatchNorm1d(16),
+            nn.BatchNorm1d(32),
             nn.LeakyReLU(),
         )
-        # self.layer2 = nn.Sequential(  # 融合处理结果
-        #     nn.Linear(32, 16),
-        #     torch.nn.Dropout(0.2),
-        #     nn.BatchNorm1d(16),
-        #     nn.LeakyReLU(),
-        # )
+        # Dueling DQN中不使用layer3
         # self.layer3 = nn.Sequential(
-        #     nn.Linear(16, a_dim)        # 输出为动作的维度
+        #     nn.Linear(32, a_dim)        # 输出为动作的维度
         # )
         # Dueling DQN中 Q = V + A
         self.fc_advantage = nn.Sequential(
-            nn.Linear(16, a_dim)  # 输出为动作的维度
+            nn.Linear(32, a_dim)  # 输出为动作的维度
         )
         self.fc_value = nn.Sequential(
-            nn.Linear(16, 1)
+            nn.Linear(32, 1)
         )
 
     def forward(self, x):
-        # print_log("type of x: ", type(x))
-        # print_log("dim of x: ", x.size())
-        # x1 = self.layer1_task(x[:, :self.s_task_dim])  # 任务
-        x = self.layer1_1vm(x)  # 虚拟机
-        x = self.layer1_2vm(x)
-        # x = torch.cat((x1, x2), dim=1)  # x1和x2以dim=1拼接，即横着拼，两个16列变成32列
-        # x = self.layer2(x2)
+        # print("type of x: ", type(x))
+        # print("dim of x: ", x.size())
+        x1 = self.layer1_task(x[:, :self.s_task_dim])  # 任务
+        x2 = self.layer1_1vm(x[:, self.s_task_dim:])  # 虚拟机
+        x2 = self.layer1_2vm(x2)
+        x = torch.cat((x1, x2), dim=1)      # x1和x2以dim=1拼接，即横着拼，两个16列变成32列
+        x = self.layer2(x)
         # x = self.layer3(x)
         advantage = self.fc_advantage(x)
         value = self.fc_value(x).expand(x.size(0), self.action_dim)
 
         x = advantage + value - advantage.mean(1).unsqueeze(1).expand(x.size(0), self.action_dim)
         return x
+
+
+#
+# class Dueling_DQN(nn.Module):
+#     def __init__(self, s_dim, a_dim):
+#         super(Dueling_DQN, self).__init__()
+#         self.state_dim = s_dim
+#         self.action_dim = a_dim
+#
+#         self.layer1 = nn.Sequential(
+#             nn.Linear(s_dim, 64),
+#             torch.nn.Dropout(0.2),
+#             nn.BatchNorm1d(64),
+#             nn.LeakyReLU(),
+#         )
+#         self.layer2 = nn.Sequential(
+#             nn.Linear(64, 128),
+#             torch.nn.Dropout(0.2),
+#             nn.BatchNorm1d(128),
+#             nn.LeakyReLU(),
+#         )
+#         # Dueling DQN中 Q = V + A
+#         self.fc_advantage = nn.Sequential(
+#             nn.Linear(128, self.action_dim)
+#         )
+#         self.fc_value = nn.Sequential(
+#             nn.Linear(128, 1)
+#         )
+#
+#     def forward(self, x):
+#         x = torch.Tensor(x)
+#         x_dim = len(x.size())
+#         if x_dim == 1:
+#             x = x.reshape(1, self.state_dim)
+#
+#         x = self.layer1(x)
+#         x = self.layer2(x)
+#         advantage = self.fc_advantage(x)
+#         value = self.fc_value(x).expand(x.size(0), self.action_dim)
+#
+#         x = advantage + value - advantage.mean(1).unsqueeze(1).expand(x.size(0), self.action_dim)
+#         return x

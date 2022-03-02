@@ -1,32 +1,39 @@
+import math
 import numpy as np
 from scheduler.scheduler import Scheduler
 from model.dqn.dqn import DQN
+from utils.state_representation import get_state
 from utils.log import print_log
 
 
 class DQNScheduler(Scheduler):
-    def __init__(self, multidomain_id, machine_num, task_batch_num, vm_task_capacity, is_federated=False):
+    def __init__(self, multidomain_id, machine_num, task_batch_num, machine_kind_num_list, machine_kind_idx_range_list,
+                 is_federated=False, epsilon_decay=0.998):
         """Initialization
 
         input : a list of tasks
         output: scheduling results, which is a list of machine id
         """
-        self.task_dim = 0
+        self.task_dim = 3
         self.machine_dim = 2
 
         self.state_all = []  # 存储所有的状态 [None,2+2*20]
         self.action_all = []  # 存储所有的动作 [None,1]
         self.reward_all = []  # 存储所有的奖励 [None,1]
-        self.vm_task_capacity = vm_task_capacity
+        self.machine_kind_idx_range_list = machine_kind_idx_range_list
 
         self.double_dqn = True
         self.dueling_dqn = True
         self.optimized_dqn = False
         self.prioritized_memory = False
-        self.DRL = DQN(multidomain_id, self.task_dim, machine_num, self.machine_dim, self.vm_task_capacity,
-                       self.double_dqn, self.dueling_dqn, self.optimized_dqn, self.prioritized_memory, is_federated)
+        self.DRL = DQN(multidomain_id, self.task_dim, machine_num, self.machine_dim, machine_kind_num_list,
+                       self.machine_kind_idx_range_list,
+                       self.double_dqn, self.dueling_dqn, self.optimized_dqn, self.prioritized_memory, is_federated, epsilon_decay)
         self.DRL.max_step = task_batch_num
         self.cur_step = 0
+        self.alpha = 0.5
+        self.beta = 0.5
+        self.C = 10
         print_log("DQN网络初始化成功！")
 
     def schedule(self, task_instance_batch, machine_list):
@@ -40,11 +47,31 @@ class DQNScheduler(Scheduler):
         return machines_id
         # if (step == 1): print_log("machines_id: " + str(machines_id))
 
-    def learn(self, task_instance_batch, machines_id):
+    def learn(self, task_instance_batch, machines_id, makespan):
         for idx, task in enumerate(task_instance_batch):  # 便历新提交的一批任务，记录动作和奖励
             self.action_all.append([machines_id[idx]])
+            # if (task.get_task_mi() < 3000 and machines_id[idx] < 6) or \
+            #         (task.get_task_mi() < 8000 and machines_id[idx] < 12) or \
+            #         (task.get_task_mi() >= 8000 and machines_id[idx] < 19):
+            #     reward = 1
+            # if (task.get_task_mi() >= 525000 and machines_id[idx] >= 17) or \
+            #     (task.get_task_mi() >= 150000 and machines_id[idx] >= 13) or \
+            #         (task.get_task_mi() >= 101000 and machines_id[idx] >= 9) or \
+            #         (task.get_task_mi() >= 59000 and machines_id[idx] >= 4) or \
+            #         (task.get_task_mi() >= 15000 and machines_id[idx] >= 0):
+            #     reward = 1
+            # else:
+            #     reward = 0
+
+            reward = self.C / (self.alpha * math.log(task.get_task_processing_time(), 10) +
+                               self.beta * math.log(makespan, 10))
             # reward = task.get_task_mi() / task.get_task_processing_time() / 100
-            reward = task.get_task_mi() / task.get_task_processing_time() / 100
+            # if task.get_task_mi() > 100000 and machines_id[idx] > 15:
+            #     reward = 100
+            # print("machine_id: ", machines_id[idx])
+            # print("task_mi: ", task.get_task_mi())
+            # print("task_processing_time: ", task.get_task_processing_time())
+            # print("reward: ", reward)
             self.reward_all.append([reward])  # 计算奖励
 
         # 减少存储数据量
@@ -61,7 +88,7 @@ class DQNScheduler(Scheduler):
 
         # 先学习一些经验，再学习
         print("cur_step: ", self.cur_step)
-        if self.cur_step > 50:
+        if self.cur_step > 2:
             # 截取最后10000条记录
             # print_log(type(self.state_all))
             # print_log(self.state_all)
@@ -76,27 +103,3 @@ class DQNScheduler(Scheduler):
             loss = self.DRL.learn()
             print_log(f"step: {self.cur_step}, loss: {loss}")
         self.cur_step += 1
-
-
-# 通过任务和机器获取状态
-def get_state(task_list, machine_list):
-    commit_time = task_list[0].commit_time  # 当前批次任务的开始时间
-    machines_state = []
-    for machine in machine_list:
-        machines_state.append(machine.get_mips())
-        machines_state.append(max(machine.get_finish_time() - commit_time, 0))  # 等待时间
-        # if (machine.next_start_time - start_time > 0):
-        #     print_log("machines_state: ", machines_state)
-    # print("machines_state: ", machines_state)
-    tasks_state = []
-    for i, task in enumerate(task_list):
-        task_state = []
-    #     task_state.append(task.get_task_mi())
-    #     task_state.append(task.get_task_cpu_utilization())
-    #     task_state.append(task.get_task_mi() / machine_list[0].get_bandwidth())  # 传输时间
-        task_state += machines_state  # 由于是DQN，所以一个任务状态加上多个虚拟机状态
-        tasks_state.append(task_state)
-    # 返回值 [[[153.0, 0.79, 0.34, 600, 0, 600, 0, 500, 0, 500, 0, 400, 0, 400, 0, 300, 0, 300, 0, 200, 0, 200, 0]... ]]
-        #           任务长度，任务利用率，任务传输时间，vm1_mips, vm1_waitTime, vm2....
-    # print("tasks_state: ", tasks_state)
-    return tasks_state

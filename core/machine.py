@@ -21,6 +21,7 @@ class Machine(object):
         self.realtime_bandwidth_utilization = 0
         self.finish_time = 0
         self.work_time = 0
+        self.batch_makespan = 0
         self.task_waiting_queue = []
 
     def add_task(self, task):
@@ -32,30 +33,32 @@ class Machine(object):
     def execute_tasks(self, multidomain_id):
         """Execute tasks in the task_waiting_queue
         """
+        self.batch_makespan = 0
         for task in self.task_waiting_queue:
             task.run_on_machine(self, multidomain_id)
             self.work_time += task.get_task_processing_time()
+            self.batch_makespan += task.get_task_processing_time()
             self.realtime_cpu_utilization = task.get_task_cpu_utilization()
-            self.realtime_memory_utilization = task.get_task_size() / self.memory
+            self.realtime_memory_utilization = round(task.get_task_size() / self.memory, 4)
             self.realtime_bandwidth_utilization = 1
             scheduler_name = glo.current_scheduler
             if glo.is_federated:
-                output_dir = f"results/machine_status_results/client-{multidomain_id}/{scheduler_name}/{glo.federated_round}"
+                output_dir = f"results/machine_status_results/federated/client-{multidomain_id}/{scheduler_name}/{glo.federated_round}"
                 check_and_build_dir(output_dir)
-                output_path = \
-                    f"results/machine_status_results/client-{multidomain_id}/{scheduler_name}/{glo.federated_round}/" \
-                    f"{self.machine_id}_status.txt"
+                output_path = output_dir + f"/{self.machine_id}_status.txt"
                 if glo.is_test:
-                    output_path = f"results/machine_status_results/client-{multidomain_id}/" \
-                                  f"{scheduler_name}/{glo.federated_round}/{self.machine_id}_status_test.txt"
+                    output_dir = f"results/machine_status_results/federated/federated_test/{scheduler_name}/{glo.federated_round}"
+                    check_and_build_dir(output_dir)
+                    output_path = output_dir + f"/{self.machine_id}_status.txt"
                 output_list = [self.work_time, self.realtime_cpu_utilization, self.realtime_memory_utilization,
                                self.realtime_bandwidth_utilization]
                 write_list_to_file(output_list, output_path, mode='a+')
             else:
-                output_dir = f"results/machine_status_results/{scheduler_name}"
+                output_dir = f"results/machine_status_results/{glo.current_dataset}{glo.records_num}/{scheduler_name}/"
+                if glo.current_batch_size != 0:
+                    output_dir += f"{glo.current_batch_size}/"
                 check_and_build_dir(output_dir)
-                output_path = \
-                    f"results/machine_status_results/{scheduler_name}/{self.machine_id}_status.txt"
+                output_path = output_dir + f"{self.machine_id}_status2.txt"
                 output_list = [self.work_time, self.realtime_cpu_utilization, self.realtime_memory_utilization,
                                self.realtime_bandwidth_utilization]
                 write_list_to_file(output_list, output_path, mode='a+')
@@ -105,3 +108,8 @@ class Machine(object):
         """Set a new finish time
         """
         self.finish_time = new_finish_time
+
+    def get_batch_makespan(self):
+        """Return batch_makespan
+        """
+        return self.batch_makespan

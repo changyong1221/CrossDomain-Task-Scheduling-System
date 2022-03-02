@@ -125,5 +125,5 @@ if __name__ == '__main__':
     # filePath = 'vm_normal.txt'
     filePath = 'machine.txt'
     # create_vms_by_normal_distribution(vmNum, filePath)
-    # plot_vms(filePath)
-    plot_all_vms(filePath)
+    plot_vms(filePath)
+    # plot_all_vms(filePath)

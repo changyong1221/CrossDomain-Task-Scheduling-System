@@ -1,6 +1,8 @@
 from scheduler.RoundRobinScheduler import RoundRobinScheduler
 from utils.get_position import get_position_by_name
 from utils.log import print_log
+from utils.write_file import write_list_to_file
+from utils.file_check import check_and_build_dir
 import globals.global_var as glo
 
 
@@ -151,14 +153,49 @@ class MultiDomain(object):
                 self.machine_list[machine_id].add_task(task_list[idx])
 
             self.run_tasks()
+        elif self.scheduler.__class__.__name__ == "RandomScheduler":
+            schedule_ret = self.scheduler.schedule(len(task_list))
+            print("RandomScheduler schedule_ret: ", schedule_ret)
+            for idx, machine_id in enumerate(schedule_ret):
+                self.machine_list[machine_id].add_task(task_list[idx])
+
+            self.run_tasks()
+        elif self.scheduler.__class__.__name__ == "EarliestScheduler":
+            task_batch_commit_time = task_list[0].get_task_commit_time()
+            self.get_idle_machine_list(task_batch_commit_time)
+            schedule_ret = self.scheduler.schedule(len(task_list), len(self.machine_list), self.idle_machine_list)
+            print("EarliestScheduler schedule_ret: ", schedule_ret)
+            for idx, machine_id in enumerate(schedule_ret):
+                self.machine_list[machine_id].add_task(task_list[idx])
+
+            self.run_tasks()
+        elif self.scheduler.__class__.__name__ == "HeuristicScheduler":
+            schedule_ret = self.scheduler.schedule(task_list)
+            print("HeuristicScheduler schedule_ret: ", schedule_ret)
+            for idx, machine_id in enumerate(schedule_ret):
+                self.machine_list[machine_id].add_task(task_list[idx])
+
+            self.run_tasks()
         elif self.scheduler.__class__.__name__ == "DQNScheduler":
             schedule_ret = self.scheduler.schedule(task_list, self.machine_list)
             for idx, machine_id in enumerate(schedule_ret):
                 self.machine_list[machine_id].add_task(task_list[idx])
 
             self.run_tasks()
+            makespan = 0
+            for machine in self.machine_list:
+                makespan = max(makespan, machine.get_batch_makespan())
+            self.scheduler.learn(task_list, schedule_ret, makespan)
+        elif self.scheduler.__class__.__name__ == "DDPGScheduler":
+            schedule_ret = self.scheduler.schedule(task_list, self.machine_list)
+            for idx, machine_id in enumerate(schedule_ret):
+                self.machine_list[machine_id].add_task(task_list[idx])
 
+            self.run_tasks()
             self.scheduler.learn(task_list, schedule_ret)
+
+        # save results
+        self.save_batch_results(task_list)
 
     def run_tasks(self):
         """Run the committed tasks
@@ -166,6 +203,49 @@ class MultiDomain(object):
         print_log("committed tasks is running...")
         for machine in self.machine_list:
             machine.execute_tasks(self.multidomain_id)
+
+    def save_batch_results(self, task_list):
+        """Save batch results
+        """
+        # 计算平均任务处理时间
+        batch_avg_task_processing_time = 0
+        for task_instance in task_list:
+            batch_avg_task_processing_time += task_instance.get_task_processing_time()
+        batch_avg_task_processing_time = round(batch_avg_task_processing_time / len(task_list), 4)
+
+        # 计算makespan和平均worktime
+        makespan = 0
+        worktime = 0
+        for machine in self.machine_list:
+            makespan = max(makespan, machine.get_batch_makespan())
+            worktime += machine.get_batch_makespan()
+        makespan = round(makespan, 4)
+        avg_worktime = round(worktime / len(self.machine_list), 4)
+
+        if glo.is_federated:
+            output_dir = f"results/task_run_results/federated/batch/client-{self.multidomain_id}/{glo.federated_round}"
+            check_and_build_dir(output_dir)
+            output_path = output_dir + "/task_batches_run_results2.txt"
+            if glo.is_test:
+                output_dir = f"results/task_run_results/federated/batch/federated_test/{glo.federated_round}"
+                check_and_build_dir(output_dir)
+                output_path = output_dir + "/task_batches_run_results2.txt"
+            output_list = [batch_avg_task_processing_time, makespan, avg_worktime]
+            write_list_to_file(output_list, output_path, mode='a+')
+        else:
+            output_dir = f"results/task_run_results/{glo.current_dataset}{glo.records_num}/{glo.current_scheduler}/task_batches/"
+            check_and_build_dir(output_dir)
+            output_path = output_dir + "task_batches_run_results2.txt"
+            output_list = [batch_avg_task_processing_time, makespan, avg_worktime]
+            write_list_to_file(output_list, output_path, mode='a+')
+
+    def get_idle_machine_list(self, task_commit_time):
+        """Get idle machines according to the commit tasks
+        """
+        self.idle_machine_list.clear()
+        for machine in self.machine_list:
+            if machine.get_finish_time() <= task_commit_time:
+                self.idle_machine_list.append(machine)
 
     def reset(self):
         """Reset cluster

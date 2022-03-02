@@ -35,7 +35,7 @@ def save_to_pic_from_list(data_list, dest_dir, plt_config, show=False):
     data_list format: [1.1, 1.2, 1.3, 1.4]
 
     """
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 4))
     plt.title(plt_config.title)
     plt.xlabel(plt_config.xlabel)
     plt.ylabel(plt_config.ylabel)
@@ -43,6 +43,33 @@ def save_to_pic_from_list(data_list, dest_dir, plt_config, show=False):
     num = len(y_axis_data)
     x_axis_data = [i for i in range(num)]
     plt.plot(x_axis_data, y_axis_data)
+    plt.savefig(dest_dir)
+    if show:
+        plt.show()
+    plt.close()
+
+
+def save_compare_pic_from_vector(data_vector, labels, dest_dir, plt_config, show=False):
+    """Draw line chart from data_list
+
+    data_list format: [[1.1, 1.2, 1.3, 1.4],
+                       [2.1, 2.2, 2.3, 2.4]]
+
+    """
+    plt.figure(figsize=(10, 4))
+    plt.title(plt_config.title)
+    plt.xlabel(plt_config.xlabel)
+    plt.ylabel(plt_config.ylabel)
+    x_axis_data = plt_config.x_axis_data
+
+    n_schedulers = len(data_vector)
+    linewidth = 1.8
+    color_list = ['green', 'red', 'slategrey', 'orange', 'lightskyblue', 'blue']
+    for i in range(n_schedulers):
+        plt.plot(x_axis_data, data_vector[i], label=labels[i], linewidth=linewidth, color=color_list[i])
+
+    # 设置图例
+    plt.legend(loc='best')
     plt.savefig(dest_dir)
     if show:
         plt.show()
@@ -90,7 +117,7 @@ def save_to_histogram(data_dir, dest_dir, plt_config, show=False):
     plt.close()
 
 
-def save_to_histogram_from_list(data_list, dest_dir, plt_config, show=False):
+def save_to_histogram_from_list(data_list, dest_dir, plt_config, show=False, show_text=True):
     """Draw histogram
 
     file_format:    1.2
@@ -99,7 +126,7 @@ def save_to_histogram_from_list(data_list, dest_dir, plt_config, show=False):
                     1.5
 
     """
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 4))
     plt.title(plt_config.title)
     plt.xlabel(plt_config.xlabel)
     plt.ylabel(plt_config.ylabel)
@@ -117,12 +144,14 @@ def save_to_histogram_from_list(data_list, dest_dir, plt_config, show=False):
     # 在柱形图上显示具体数值，ha参数控制水平对齐方式，va控制垂直对齐方式
     # zip()将可迭代的对象中的对应元素打包成一个元组，然后返回这些元组组成的列表
     # 例：zip([1, 2, 3], [4, 5, 6])返回[(1, 4), (2, 5), (3, 6)]
-    z_xy = zip(x_axis_data, y_axis_data)
-    for xx, yy in z_xy:
-        if yy == 0:
-            continue
-        plt.text(xx, yy - 3, str(round(yy, 2)), ha='center', va='bottom', fontsize=11, rotation=45)
-        # plt.text(xx, yy - 3, str(round(yy, 2)) + '%', ha='center', va='bottom', fontsize=12, rotation=45)
+    if show_text:
+        z_xy = zip(x_axis_data, y_axis_data)
+        for xx, yy in z_xy:
+            if yy == 0:
+                continue
+            plt.text(xx, yy - 1, round(yy, 2), ha='center', va='bottom', fontsize=10, rotation=45)
+            # plt.text(xx, yy - 40, round(yy, 2), ha='center', va='bottom', fontsize=10, rotation=45)
+            # plt.text(xx, yy - 10, str(round(yy, 2)) + '%', ha='center', va='bottom', fontsize=11, rotation=45)
 
     plt.savefig(dest_dir)
     if show:

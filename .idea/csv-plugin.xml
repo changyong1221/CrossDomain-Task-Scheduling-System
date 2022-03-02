@@ -10,10 +10,31 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\analyzer\batch_analyzer.py">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\analyzer\data_analyzer.py">
           <value>
             <Attribute>
               <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\analyzer\federated_analyzer.py">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\analyzer\results_analyzer.py">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
@@ -108,6 +129,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\model\ddpg\ddpg.py">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\model\dqn\dqn.py">
           <value>
             <Attribute>
@@ -136,6 +164,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\scheduler\HeuristicScheduler.py">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\utils\create_pic.py">
           <value>
             <Attribute>
@@ -157,10 +192,24 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\utils\plt_config.py">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\utils\read_data.py">
           <value>
             <Attribute>
               <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\utils\state_representation.py">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
