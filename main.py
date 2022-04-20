@@ -44,13 +44,13 @@ def inter_domain_scheduling(test_batch_size=0):
         multi_domain.add_domain(domain)
 
     # 6. load tasks
-    glo.records_num = 500
-    glo.current_dataset = "GoCJ"
-    # glo.records_num = 1000000
-    # glo.current_dataset = "Alibaba"
+    # glo.records_num = 500
+    # glo.current_dataset = "GoCJ"
+    glo.records_num = 100000
+    glo.current_dataset = "Alibaba"
     # glo.current_batch_size = test_batch_size
-    # task_file_path = f"dataset/Alibaba/Alibaba-Cluster-trace-{glo.records_num}-test.txt"
-    task_file_path = f"dataset/GoCJ/GoCJ_Dataset_{glo.records_num}batches_40concurrency_train.txt"
+    task_file_path = f"dataset/Alibaba/Alibaba-Cluster-trace-{glo.records_num}-test.txt"
+    # task_file_path = f"dataset/GoCJ/GoCJ_Dataset_{glo.records_num}batches_40concurrency_train.txt"
     # task_file_path = f"dataset/Alibaba/batch/Alibaba-Cluster-trace-{glo.current_batch_size}-batch-test.txt"
     task_batch_list = load_task_batches_from_file(task_file_path, delimiter='\t')
 
@@ -70,13 +70,18 @@ def inter_domain_scheduling(test_batch_size=0):
     # GA scheduler
     # scheduler = HeuristicScheduler(machine_list)
     # D3QN
-    # glo.is_federated = False
-    # glo.is_test = False
-    # machine_kind_num_list, machine_kind_idx_range_list = get_machine_kind_list(machine_list)
-    # scheduler = DQNScheduler(multi_domain.multidomain_id, machine_num, task_batch_num, machine_kind_num_list,
-    #                          machine_kind_idx_range_list, is_federated=glo.is_federated)
+    epsilon_dec = 1.0
+    prob = 0.5
+    balance_prob = 0.9
+    
+    glo.is_federated = False
+    glo.is_test = False
+    machine_kind_num_list, machine_kind_idx_range_list = get_machine_kind_list(machine_list)
+    
+    scheduler = DQNScheduler(multi_domain.multidomain_id, machine_num, task_batch_num, machine_kind_num_list,
+                             machine_kind_idx_range_list, is_federated=glo.is_federated, epsilon_decay=epsilon_dec, prob=prob, balance_prob=balance_prob)
     # DDPG
-    scheduler = DDPGScheduler(machine_num, task_batch_num)
+    # scheduler = DDPGScheduler(machine_num, task_batch_num)
 
     scheduler_name = scheduler.__class__.__name__
     glo.task_run_results_path = glo.results_path_list[scheduler_name]
@@ -91,7 +96,7 @@ def inter_domain_scheduling(test_batch_size=0):
     multi_domain.reset()
 
     # 10. show statistics
-    # compute_avg_task_process_time_by_name(scheduler_name)
+    compute_avg_task_process_time_by_name(scheduler_name)
 
 
 if __name__ == "__main__":

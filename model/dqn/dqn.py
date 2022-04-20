@@ -21,7 +21,7 @@ class DQN(object):
     # 每次把一个任务分配给一个虚拟机
     def __init__(self, multidomain_id, task_dim, vms, vm_dim, machine_kind_num_list, machine_kind_idx_range_list,
                  double_dqn=False, dueling_dqn=False, optimized_dqn=False,
-                 use_prioritized_memory=False, is_federated=False, epsilon_decay=0.998):
+                 use_prioritized_memory=False, is_federated=False, epsilon_decay=0.998, prob=0.5, balance_prob=0.5):
         self.multidomain_id = multidomain_id
         self.task_dim = task_dim  # 任务维度
         self.vms = vms  # 虚拟机数量
@@ -51,6 +51,7 @@ class DQN(object):
         self.step = 0
         self.max_step = 0
         self.target_prob = 1.0      # 学习目标算法的概率，若目标算法为fine grain，则有50%的几率在随机选择动作时以fine grain策略选择动作
+        self.prob = prob
 
         # 均衡策略
         self.machine_kind_num_list = machine_kind_num_list                  # 记录每类机器的数目
@@ -62,7 +63,7 @@ class DQN(object):
         self.balance_factor_max = 0.9       # 阶梯平衡因子，前一级阶梯与后一级阶梯的比值应介于平衡因子[min, max]之间
         self.balance_factor_min = 0.85
         self.task_affinity_factor = 0.9    # 任务亲和度，针对大任务优化，大任务对高性能机器具有更高的亲和度，该优化的优先级高于负载因子
-        self.balance_prob = 0.5     # 小于balance_prob使用任务亲和度优化，大于balance_prob使用负载均衡优化
+        self.balance_prob = balance_prob     # 小于balance_prob使用任务亲和度优化，大于balance_prob使用负载均衡优化
 
         if self.dueling_dqn:
             self.eval_net = Dueling_DQN(self.s_task_dim, self.s_vm_dim, self.a_dim)
@@ -135,15 +136,17 @@ class DQN(object):
             s_task_num = len(s_list)
 
             # # 后面的代码增加分配VM的负载均衡，也是对动作的探索，融入了轮寻算法
-            # for i in range(s_task_num):
-            #     if actions[i] not in adict:
-            #         adict[actions[i]] = 1
-            #     else:
-            #         adict[actions[i]] += 1
-            # for i in range(s_task_num):
-            #     # 如果VM被分配的任务个数大于2，按后面的概率随机给任务分配VM
-            #     if adict[actions[i]] > int(s_task_num / self.vms_num) and np.random.uniform() > 0.5:
-            #         actions[i] = np.random.randint(self.vms_num)  # randint范围: [,]
+            # if (np.random.uniform() > self.prob):
+            #     for i in range(s_task_num):
+            #         if actions[i] not in adict:
+            #             adict[actions[i]] = 1
+            #         else:
+            #             adict[actions[i]] += 1
+            #     for i in range(s_task_num):
+            #         # 如果VM被分配的任务个数大于2，按后面的概率随机给任务分配VM
+            #         # if adict[actions[i]] > int(s_task_num / self.vms_num) and np.random.uniform() > self.prob:
+            #         if adict[actions[i]] > int(s_task_num / self.vms_num):
+            #             actions[i] = np.random.randint(self.vms_num)  # randint范围: [,]
         else:
             action_list = [0 for i in range(len(s_list))]
             for i, action in enumerate(action_list):

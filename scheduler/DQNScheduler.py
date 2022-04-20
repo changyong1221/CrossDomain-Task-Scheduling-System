@@ -8,7 +8,7 @@ from utils.log import print_log
 
 class DQNScheduler(Scheduler):
     def __init__(self, multidomain_id, machine_num, task_batch_num, machine_kind_num_list, machine_kind_idx_range_list,
-                 is_federated=False, epsilon_decay=0.998):
+                 is_federated=False, epsilon_decay=0.998, prob=0.5, balance_prob=0.5):
         """Initialization
 
         input : a list of tasks
@@ -28,7 +28,7 @@ class DQNScheduler(Scheduler):
         self.prioritized_memory = False
         self.DRL = DQN(multidomain_id, self.task_dim, machine_num, self.machine_dim, machine_kind_num_list,
                        self.machine_kind_idx_range_list,
-                       self.double_dqn, self.dueling_dqn, self.optimized_dqn, self.prioritized_memory, is_federated, epsilon_decay)
+                       self.double_dqn, self.dueling_dqn, self.optimized_dqn, self.prioritized_memory, is_federated, epsilon_decay, prob, balance_prob)
         self.DRL.max_step = task_batch_num
         self.cur_step = 0
         self.alpha = 0.5
@@ -62,9 +62,10 @@ class DQNScheduler(Scheduler):
             #     reward = 1
             # else:
             #     reward = 0
-
-            reward = self.C / (self.alpha * math.log(task.get_task_processing_time(), 10) +
-                               self.beta * math.log(makespan, 10))
+            task_item = 2 if task.get_task_processing_time() <= 2 else task.get_task_processing_time()
+            makespan_item = 2 if makespan <= 2 else makespan
+            reward = self.C / (self.alpha * math.log(task_item, 10) +
+                               self.beta * math.log(makespan_item, 10))
             # reward = task.get_task_mi() / task.get_task_processing_time() / 100
             # if task.get_task_mi() > 100000 and machines_id[idx] > 15:
             #     reward = 100

@@ -10,7 +10,7 @@ results_path_list = {
     "EarliestScheduler": "results/task_run_results/EarliestScheduler/EarliestScheduler_task_run_results.txt",
     "HeuristicScheduler": "results/task_run_results/HeuristicScheduler/HeuristicScheduler_task_run_results.txt",
     # "DQNScheduler": "results/task_run_results/DQNScheduler/DQNScheduler_task_run_results.txt",
-    "DQNScheduler": "results/task_run_results/client-0/DQNScheduler_task_run_results_test.txt",
+    "DQNScheduler": "results/task_run_results/Alibaba100000/DQNScheduler/DQNScheduler_task_run_results2.txt",
     "DDPGScheduler": "results/task_run_results/DDPGScheduler/DDPGScheduler_task_run_results.txt"
 }
 task_run_results_path = None

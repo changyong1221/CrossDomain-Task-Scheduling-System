@@ -54,10 +54,40 @@ def client_train(client_id, epoch):
     task_batch_num = len(task_batch_list)
     # scheduler = RoundRobinScheduler(machine_num)
     machine_kind_num_list, machine_kind_idx_range_list = get_machine_kind_list(machine_list)
-    epsilon_inc = 0.00014
-    epsilon_dec = 0.998 + epsilon_inc * epoch
+    
+    # 第一种方式，改epsilon_decay
+    # target = 0.9998
+    # target = 1.05
+    # init = 0.975
+    # diff = target - init
+    # epochs = 10
+    # epsilon_inc = diff / epochs
+    # epsilon_dec = init + epsilon_inc * epoch
+    # epsilon_dec = 0.998
+    
+    # 第二种方式，改action average
+    # init = 1
+    # target = 0.3
+    # diff = init - target
+    # epochs = 10
+    # prob_decay = diff / epochs
+    # prob = init - prob_decay * epoch
+    
+    # 第三种方式，改balance_prob
+    # target = 0.3
+    # init = 1.0
+    # diff = target - init
+    # epochs = 100
+    # bprob_step = diff / epochs
+    # balance_prob = init - bprob_step * epoch
+    balance_prob = 0.3
+    
+    epsilon_dec = 1.0
+    prob = 0.5
+    # balance_prob = 0.1
+
     scheduler = DQNScheduler(multi_domain.multidomain_id, machine_num, task_batch_num, machine_kind_num_list,
-                             machine_kind_idx_range_list, is_federated=True, epsilon_decay=epsilon_dec)
+                             machine_kind_idx_range_list, is_federated=True, epsilon_decay=epsilon_dec, prob=prob, balance_prob=balance_prob)
     scheduler_name = scheduler.__class__.__name__
     glo.current_scheduler = scheduler_name
     multi_domain.set_scheduler(scheduler)
@@ -118,16 +148,41 @@ def federated_test(epoch):
     task_batch_num = len(tasks_for_test)
     # scheduler = RoundRobinScheduler(machine_num)
     machine_kind_num_list, machine_kind_idx_range_list = get_machine_kind_list(machine_list)
-    # target = 0.999879
-    # rounds = 1421
-    # initial = 0.94
-    # diff = 0.999879 - 0.94 = 0.059879
+    
+    # 第一种方式，改epsilon_decay
+    # target = 0.9998
+    # target = 1.05
+    # init = 0.975
+    # diff = target - init
     # epochs = 10
-    # inc = diff / epochs = 0.0059879
-    epsilon_inc = 0.0059879
-    epsilon_dec = 0.94 + epsilon_inc * epoch
+    # epsilon_inc = diff / epochs
+    # epsilon_dec = init + epsilon_inc * epoch
+    # epsilon_dec = 0.998
+    
+    # 第二种方式，改action average
+    # init = 1
+    # target = 0.3
+    # diff = init - target
+    # epochs = 10
+    # prob_decay = diff / epochs
+    # prob = init - prob_decay * epoch
+    
+    # 第三种方式，改balance_prob
+    target = 0.6
+    init = 0.7
+    diff = init - target
+    epochs = 50
+    bprob_step = diff / epochs
+    balance_prob = init - bprob_step * (epoch - 100)
+    if epoch > 150:
+        balance_prob = 0.6
+    
+    epsilon_dec = 1.0
+    prob = 0.5
+    # balance_prob = 0.1
+    
     scheduler = DQNScheduler(multi_domain.multidomain_id, machine_num, task_batch_num, machine_kind_num_list,
-                             machine_kind_idx_range_list, is_federated=True, epsilon_decay=epsilon_dec)
+                             machine_kind_idx_range_list, is_federated=True, epsilon_decay=epsilon_dec, prob=prob, balance_prob=balance_prob)
     scheduler_name = scheduler.__class__.__name__
     glo.current_scheduler = scheduler_name
     multi_domain.set_scheduler(scheduler)
@@ -149,7 +204,7 @@ def test_federated():
     # Initialization
     start_time = time.time()
     n_clients = 10
-    federated_rounds = 10
+    federated_rounds = 220
     glo.is_federated = True
     glo.is_test = False
     glo.is_print_log = False
@@ -157,7 +212,7 @@ def test_federated():
 
     # federated main
     print("federated learning start...")
-    for epoch in range(federated_rounds):
+    for epoch in range(100, federated_rounds):
         glo.federated_round = epoch
         print(f"Round {epoch}")
         for client_id in range(n_clients):

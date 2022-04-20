@@ -96,10 +96,10 @@ def analyze_federated_task_processing_time_results():
 def compute_avg_task_process_time():
     """Compute average task process time of different scheduling algorightm
     """
-    idx = 5
+    idx = 4
     schedulers = ["RR", "Random", "Earliest", "GA", "DQN", "DDPG"]
     # dataset = "GoCJ4000"
-    dataset = "Alibaba1000000"
+    dataset = "Alibaba100000"
     data_path = [
         f"../results/task_run_results/{dataset}/RoundRobinScheduler/RoundRobinScheduler_task_run_results.txt",
         f"../results/task_run_results/{dataset}/RandomScheduler/RandomScheduler_task_run_results.txt",
@@ -181,6 +181,7 @@ def compute_avg_task_process_time_by_name(scheduler_name):
 if __name__ == '__main__':
     # analyze_task_results()
     # analyze_machine_results()
-    compute_avg_task_process_time()
-    compute_task_to_machine_map()
+    # compute_avg_task_process_time()
+    # compute_task_to_machine_map()
     # analyze_federated_task_processing_time_results()
+    compute_avg_task_process_time_by_name("DQNScheduler")
