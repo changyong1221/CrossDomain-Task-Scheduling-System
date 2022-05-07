@@ -99,3 +99,10 @@ class TaskRunInstance(Task):
         else:
             return -1
 
+    def get_task_waiting_time(self):
+        """Return task waiting time
+        """
+        if self.is_done:
+            return self.task_waiting_time
+        else:
+            return -1

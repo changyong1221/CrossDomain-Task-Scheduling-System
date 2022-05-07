@@ -1,0 +1,2 @@
+使用了原始的奖惩函数
+reward = task.get_task_mi() / task.get_task_processing_time() / 100

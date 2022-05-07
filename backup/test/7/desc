@@ -1,0 +1,5 @@
+测试模型
+开启learn
+init_epsilon = 0.95
+epsilon_decay = 0.998
+先训练，再测试

@@ -1,0 +1,5 @@
+测试模型
+开启learn
+init_epsilon = 1.0
+epsilon_decay = 1.0
+complete random

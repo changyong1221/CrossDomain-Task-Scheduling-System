@@ -47,25 +47,37 @@ class DQNScheduler(Scheduler):
         return machines_id
         # if (step == 1): print_log("machines_id: " + str(machines_id))
 
-    def learn(self, task_instance_batch, machines_id, makespan):
+    def learn(self, task_instance_batch, machines_id, makespan, machine_list):
+        reward_save_path = f"backup/test-0506/D3QN-OPT4/test/reward.txt"
+        action_save_path = f"backup/test-0506/D3QN-OPT4/test/action.txt"
         for idx, task in enumerate(task_instance_batch):  # 便历新提交的一批任务，记录动作和奖励
             self.action_all.append([machines_id[idx]])
-            # if (task.get_task_mi() < 3000 and machines_id[idx] < 6) or \
-            #         (task.get_task_mi() < 8000 and machines_id[idx] < 12) or \
-            #         (task.get_task_mi() >= 8000 and machines_id[idx] < 19):
-            #     reward = 1
-            # if (task.get_task_mi() >= 525000 and machines_id[idx] >= 17) or \
-            #     (task.get_task_mi() >= 150000 and machines_id[idx] >= 13) or \
-            #         (task.get_task_mi() >= 101000 and machines_id[idx] >= 9) or \
-            #         (task.get_task_mi() >= 59000 and machines_id[idx] >= 4) or \
-            #         (task.get_task_mi() >= 15000 and machines_id[idx] >= 0):
-            #     reward = 1
+            with open(action_save_path, 'a+') as f:
+                f.write(f"{task.get_task_mi()}\t{machines_id[idx]}\n")
+
+            # reward = self.C / (self.alpha * math.log(task_item, 10) +
+            #                   self.beta * math.log(makespan_item, 10))
+            
+            w = 1000          
+            reward = math.log(task.get_task_mi() * w) / (self.alpha * math.log(task.get_task_processing_time() * w, 10) +
+                              self.beta * math.log(makespan * w, 10))
+            
+            # reward = task.get_task_mi() / task.get_task_processing_time() / 100
+            
+            # reward = round(task.get_task_waiting_time(), 3)
+            # reward = 10 / (math.log(task.get_task_waiting_time() + 10, 10))
+            
+            # if task.get_task_mi() == 59000 and machine_list[machines_id[idx]].get_mips() == 24000:
+            #     reward = 3
+            # elif task.get_task_mi() == 99000 and machine_list[machines_id[idx]].get_mips() == 4000:
+            #     reward = 2
             # else:
-            #     reward = 0
-            task_item = 2 if task.get_task_processing_time() <= 2 else task.get_task_processing_time()
-            makespan_item = 2 if makespan <= 2 else makespan
-            reward = self.C / (self.alpha * math.log(task_item, 10) +
-                               self.beta * math.log(makespan_item, 10))
+            #     reward = -1
+                               
+            # reward = task.get_task_mi() / task.get_task_processing_time() / 100
+            # reward = task.get_task_processing_time() / task.get_task_mi()
+            with open(reward_save_path, 'a+') as f:
+                f.write(str(round(reward, 3)) + "\n")
             # reward = task.get_task_mi() / task.get_task_processing_time() / 100
             # if task.get_task_mi() > 100000 and machines_id[idx] > 15:
             #     reward = 100
@@ -89,7 +101,7 @@ class DQNScheduler(Scheduler):
 
         # 先学习一些经验，再学习
         print("cur_step: ", self.cur_step)
-        if self.cur_step > 2:
+        if self.cur_step > 400:
             # 截取最后10000条记录
             # print_log(type(self.state_all))
             # print_log(self.state_all)

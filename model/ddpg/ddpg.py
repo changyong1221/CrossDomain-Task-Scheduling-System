@@ -74,6 +74,7 @@ class DDPG(object):
     def choose_action(self, s_list):
         if self.epsilon > self.epsilon_min:  # epsilon最小值
             self.epsilon *= self.epsilon_decay
+        print(f"epsilon: {self.epsilon}")
         if np.random.uniform() > self.epsilon:  # np.random.uniform()输出0到1之间的一个随机数
             self.Actor_eval.eval()    # 进入evaluate模式，区别于train模式，在eval模式，框架会自动把BatchNormalize和Dropout固定住，不会取平均，而是用训练好的值
             actions_value = self.Actor_eval(torch.from_numpy(s_list).float())
@@ -119,10 +120,23 @@ class DDPG(object):
         self.ctrain.zero_grad()
         td_error.backward()
         self.ctrain.step()
+        
+        # 将Q值保存到文件中
+        q_value_save_path = f"backup/test-0506/DDPG/test/q_value.txt"
+        with open(q_value_save_path, 'a+') as f:
+            q_target_list = q_target.tolist()
+            q_value = np.mean(q_target_list)
+            f.write(str(round(q_value, 3)) + "\n")
 
         # 训练actor网络，使用了有监督的方法，选择reward大于平均值的样本
         a = self.Actor_eval(self.bstate_well)
         loss_a = self.loss_td(self.baction_well, a)
+        
+        # 将loss保存到文件中
+        loss_save_path = f"backup/test-0506/DDPG/test/loss.txt"
+        with open(loss_save_path, 'a+') as f:
+            f.write(str(round(loss_a.item(), 3)) + "\n")
+        
         self.atrain_supervise.zero_grad()
         loss_a.backward()
         self.atrain_supervise.step()
@@ -131,6 +145,7 @@ class DDPG(object):
         a = self.Actor_eval(self.bstate)
         q = self.Critic_eval(self.bstate, a)
         loss_b = torch.mean(torch.abs(q))  # 如果 a 是一个正确的行为的话，那么它的 Q 应该更小，也更接近 0
+
         self.atrain.zero_grad()
         loss_b.backward()
         self.atrain.step()

@@ -64,7 +64,7 @@ def save_compare_pic_from_vector(data_vector, labels, dest_dir, plt_config, show
 
     n_schedulers = len(data_vector)
     linewidth = 1.8
-    color_list = ['red', 'green', 'slategrey', 'orange', 'lightskyblue', 'blue']
+    color_list = ['blue', 'red', 'slategrey', 'orange', 'lightskyblue', 'green', 'lightgrey', 'slateblue']
     for i in range(n_schedulers):
         plt.plot(data_vector[i], label=labels[i], linewidth=linewidth, color=color_list[i])
         # plt.plot(x_axis_data, data_vector[i], label=labels[i], linewidth=linewidth, color=color_list[i])
