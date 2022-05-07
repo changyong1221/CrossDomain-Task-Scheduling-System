@@ -66,8 +66,8 @@ def plot_task_batch_results():
 
 
 def plot_throughoutput_comparison():
-    schedulers = ["DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DDPGScheduler", "RoundRobinScheduler", "RandomScheduler", "EarliestScheduler", "HeuristicScheduler", "HeuristicScheduler"]
-    labels = ["D3QN-OPT3", "D3QN-OPT2", "D3QN-OPT", "D3QN", "DQN", "DQN2", "DQN3", "DDPG", "RR", "Random", "Earliest", "GA", "GA2"]
+    schedulers = ["DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DDPGScheduler", "RoundRobinScheduler", "RandomScheduler", "EarliestScheduler", "HeuristicScheduler", "HeuristicScheduler"]
+    labels = ["D3QN-OPT4", "D3QN-OPT3", "D3QN-OPT2", "D3QN-OPT", "D3QN", "DQN", "DQN2", "DQN3", "DDPG", "RR", "Random", "Earliest", "GA", "GA2"]
 
     # 获取总任务数
     data_path = f"D3QN-OPT/test/task_run_results/{glo.current_dataset}{glo.records_num}/DQNScheduler/" \
@@ -90,7 +90,7 @@ def plot_throughoutput_comparison():
     for i, elem in enumerate(throughoutput_list):
         throughoutput_list[i] = task_num / elem * 1000000
     print(throughoutput_list)
-    dest_path = f"throughoutput_comparison_on_GoCJ5000-7.png"
+    dest_path = f"throughoutput_comparison_on_GoCJ5000-8.png"
     plt_config = PltConfig()
     plt_config.title = f"throughoutput comparison on {glo.current_dataset}{glo.records_num}"
     plt_config.xlabel = "scheduling algorithms"
@@ -100,8 +100,8 @@ def plot_throughoutput_comparison():
 
 
 def plot_average_task_processing_time_comparison():
-    schedulers = ["DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DDPGScheduler", "RoundRobinScheduler", "RandomScheduler", "EarliestScheduler", "HeuristicScheduler", "HeuristicScheduler"]
-    labels = ["D3QN-OPT3", "D3QN-OPT2", "D3QN-OPT", "D3QN", "DQN", "DQN2", "DQN3", "DDPG", "RR", "Random", "Earliest", "GA", "GA2"]
+    schedulers = ["DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DQNScheduler", "DDPGScheduler", "RoundRobinScheduler", "RandomScheduler", "EarliestScheduler", "HeuristicScheduler", "HeuristicScheduler"]
+    labels = ["D3QN-OPT4", "D3QN-OPT3", "D3QN-OPT2", "D3QN-OPT", "D3QN", "DQN", "DQN2", "DQN3", "DDPG", "RR", "Random", "Earliest", "GA", "GA2"]
 
     # 获取总任务数
     # 计算每个调度算法的单位时间吞吐量
@@ -126,7 +126,7 @@ def plot_average_task_processing_time_comparison():
         total_avg_task_processing_time_list.append(process_time_mean)
     for i, elem in enumerate(total_avg_task_processing_time_list):
         total_avg_task_processing_time_list[i] /= 1000
-    dest_path = f"total_average_task_processing_time_comparison_on_{glo.current_dataset}{glo.records_num}-7.png"
+    dest_path = f"total_average_task_processing_time_comparison_on_{glo.current_dataset}{glo.records_num}-8.png"
     plt_config = PltConfig()
     plt_config.title = f"total average task processing time comparison on {glo.current_dataset}{glo.records_num}"
     plt_config.xlabel = "scheduling algorithms"
