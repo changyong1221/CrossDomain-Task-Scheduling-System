@@ -26,23 +26,23 @@ def create_dataset(filePath):
     # print(len(df['start_time'][:100000].unique()))
     # exit()
 
-    test_records_num = 1000000
-    train_records_num = 1000000     # 总的训练集数量
+    test_records_num = 500000
+    train_records_num = 500000     # 总的训练集数量
 
     # 计算最大最小batch_size
-    # tmp_df = df[0: test_records_num]
-    # batch_times = tmp_df['start_time'].unique()
-    # batch_num = len(batch_times)
-    # print("batch_num: ", batch_num)
-    # max_len = 0
-    # min_len = 100
-    # for i in range(batch_num):
-    #     i_len = len(tmp_df[tmp_df['start_time'] == batch_times[i]])
-    #     max_len = i_len if i_len > max_len else max_len
-    #     min_len = i_len if i_len < min_len else min_len
-    #
-    # print("max_len: ", max_len)
-    # print("min_len: ", min_len)
+    tmp_df = df[0: test_records_num]
+    batch_times = tmp_df['start_time'].unique()
+    batch_num = len(batch_times)
+    print("batch_num: ", batch_num)
+    max_len = 0
+    min_len = 100
+    for i in range(batch_num):
+        i_len = len(tmp_df[tmp_df['start_time'] == batch_times[i]])
+        max_len = i_len if i_len > max_len else max_len
+        min_len = i_len if i_len < min_len else min_len
+    
+    print("max_len: ", max_len)
+    print("min_len: ", min_len)
     # exit()
 
     fileName = 'Alibaba-Cluster-trace-' + str(train_records_num) + '-test.txt'
@@ -99,6 +99,40 @@ def create_client_dataset(filePath, client_num):
         tmp_df.to_csv(fileName, header=False, sep='\t')
 
 
+# 分割数据集
+def split_dataset(filePath):
+    df = pd.read_csv(filePath, header=None, delimiter='\t')
+    n_test_records = 500000
+    n_train_records = 500000
+    df_test = df[:n_test_records]
+    df_train = df[n_test_records:n_test_records+n_train_records]
+    
+    fileName = 'Alibaba-Cluster-trace-' + str(n_test_records) + '-test.txt'
+    df_test.to_csv(fileName, header=False, index=False, sep='\t')
+    fileName = 'Alibaba-Cluster-trace-' + str(n_train_records) + '-train.txt'
+    df_train.to_csv(fileName, header=False, index=False, sep='\t')
+
+
+# 读取数据集
+def read_dataset():
+    filePath = "Alibaba-Cluster-trace-500000-train.txt"
+    tmp_df = pd.read_csv(filePath, header=None, delimiter='\t')
+    tmp_df.columns = ['task_id', 'start_time', 'length', 'cpu_avg', 'size']
+    
+    batch_times = tmp_df['start_time'].unique()
+    batch_num = len(batch_times)
+    print("batch_num: ", batch_num)
+    max_len = 0
+    min_len = 100
+    for i in range(batch_num):
+        i_len = len(tmp_df[tmp_df['start_time'] == batch_times[i]])
+        max_len = i_len if i_len > max_len else max_len
+        min_len = i_len if i_len < min_len else min_len
+    
+    print("max_len: ", max_len)
+    print("min_len: ", min_len)
+
+
 if __name__ == '__main__':
     # 解决控制台输出省略号的问题
     pd.set_option('display.max_columns', 1000)      # 显示所有列
@@ -106,6 +140,9 @@ if __name__ == '__main__':
     pd.set_option('display.max_colwidth', 1000)
     pd.set_option('display.max_rows', None)         # 显示所有行
 
-    filePath = "Alibaba-Cluster-trace-v2018-10million.csv"
+    # filePath = "Alibaba-Cluster-trace-v2018-10million.csv"
+    filePath = "Alibaba-Cluster-trace-1000000-test.txt"
+    read_dataset()
+    # split_dataset(filePath)
     # create_dataset(filePath)
-    create_client_dataset(filePath, client_num=10)
+    # create_client_dataset(filePath, client_num=10)

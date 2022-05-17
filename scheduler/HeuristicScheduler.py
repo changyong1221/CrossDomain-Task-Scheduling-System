@@ -9,7 +9,7 @@ class HeuristicScheduler(Scheduler):
         """
         # GA调度算法的参数
         self.popsize = 10        # 种群大小
-        self.gmax = 200          # 迭代次数
+        self.gmax = 100          # 迭代次数
         self.crossover_prob = 0.8    # 交叉概率
         self.mutation_rate = 0.01    # 变异概率
         self.machine_list = machine_list

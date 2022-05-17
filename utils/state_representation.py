@@ -5,21 +5,22 @@ import globals.global_var as glo
 
 
 # 通过任务和机器获取状态
-def get_state(task_list, machine_list):
+def get_state(task_list, machine_list, machine_assigned_task_list):
     commit_time = task_list[0].commit_time  # 当前批次任务的开始时间
     machines_state = []
-    for machine in machine_list:
-        machines_state.append(machine.get_mips())
-        machines_state.append(max(machine.get_finish_time() - commit_time, 0))  # 等待时间
+    for i, machine in enumerate(machine_list):
+        machines_state.append(machine.get_mips() / 1000)
+        machines_state.append(max((machine.get_finish_time() - commit_time) / 1000, 0))  # 等待时间
+        machines_state.append(machine_assigned_task_list[i])    # 机器已分配任务数
         # if (machine.next_start_time - start_time > 0):
         #     print_log("machines_state: ", machines_state)
     # print("machines_state: ", machines_state)
     tasks_state = []
     for i, task in enumerate(task_list):
         task_state = []
-        task_state.append(task.get_task_mi())
+        task_state.append(task.get_task_mi() / 10000)
         task_state.append(task.get_task_cpu_utilization())
-        task_state.append(task.get_task_mi() / machine_list[0].get_bandwidth())  # 传输时间
+        task_state.append(task.get_task_mi() / machine_list[0].get_bandwidth() / 1000)  # 传输时间
         task_state += machines_state  # 由于是DQN，所以一个任务状态加上多个虚拟机状态
         tasks_state.append(task_state)
     # 返回值 [[[153.0, 0.79, 0.34, 600, 0, 600, 0, 500, 0, 500, 0, 400, 0, 400, 0, 300, 0, 300, 0, 200, 0, 200, 0]... ]]
@@ -74,6 +75,22 @@ def get_ddpg_state(task_list, machine_list):
         #           任务长度，任务利用率，任务传输时间，vm1_mips, vm1_waitTime, vm2....
     # print("tasks_state: ", tasks_state)
     return tasks_state
+
+
+# 根据机器性能计算各个机器对应的权值
+def get_machine_weight(machine_list):
+    # 定义数组用于存储最终结果
+    machine_weight_list = [0 for i in range(len(machine_list))]
+    # 所有机器的总mips
+    total_mips = 0
+    for machine in machine_list:
+        # print(f"machine.mips: {machine.mips}")
+        total_mips += machine.mips
+    # print("total_mips: ", total_mips)
+    # 计算每个机器mips占总mips的比例
+    for i, machine in enumerate(machine_list):
+        machine_weight_list[i] = (float)(machine.mips) / total_mips
+    return machine_weight_list
 
 
 # 根据机器性能分配任务数

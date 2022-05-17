@@ -30,8 +30,8 @@ class DDPGScheduler(Scheduler):
         return machines_id
 
     def learn(self, task_instance_batch, machines_id):
-        reward_save_path = f"backup/test-0506/DDPG/test/reward.txt"
-        action_save_path = f"backup/test-0506/DDPG/test/action.txt"
+        reward_save_path = f"backup/test-0508/DDPG/test/reward.txt"
+        action_save_path = f"backup/test-0508/DDPG/test/action.txt"
         for idx, task in enumerate(task_instance_batch):  # 便历新提交的一批任务，记录动作和奖励
             self.action_all.append([machines_id[idx]])
             with open(action_save_path, 'a+') as f:
@@ -65,7 +65,7 @@ class DDPGScheduler(Scheduler):
             self.DRL.step = self.cur_step
             loss = self.DRL.learn()
             # 将loss保存到文件中
-            loss_save_path = f"backup/test-0506/DDPG/test/error_ddpg.txt"
+            loss_save_path = f"backup/test-0508/DDPG/test/error_ddpg.txt"
             with open(loss_save_path, 'a+') as f:
                 f.write(str(np.round(loss, 3)) + "\n")
             print_log(f"step: {self.cur_step}, loss: {loss}")
