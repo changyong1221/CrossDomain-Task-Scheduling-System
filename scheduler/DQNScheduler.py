@@ -73,9 +73,9 @@ class DQNScheduler(Scheduler):
         # m_std = compute_std(machine_weight_list, self.machine_assigned_task_list)
         
         
-        reward_save_path = f"backup/test-0517/D3QN-OPT/train10/reward.txt"
-        action_save_path = f"backup/test-0517/D3QN-OPT/train10/action.txt"
-        info_save_path = f"backup/test-0517/D3QN-OPT/train10/info.txt"
+        reward_save_path = f"backup/test-0517/D3QN-OPT/train11/reward.txt"
+        action_save_path = f"backup/test-0517/D3QN-OPT/train11/action.txt"
+        info_save_path = f"backup/test-0517/D3QN-OPT/train11/info.txt"
         
         states = get_state(task_instance_batch, self.machine_list, self.cur_weight_list)
 
@@ -116,10 +116,10 @@ class DQNScheduler(Scheduler):
             #     reward_scale = m_wait_elem
             # print(reward_scale)
             # exit()
-            reward = reward_scale * (math.log(task.get_task_mi() * w, 10) / (self.beta * math.log(weight_ratio * w, 10)))
+            # reward = reward_scale * (math.log(task.get_task_mi() * w, 10) / (self.beta * math.log(weight_ratio * w, 10)))
             # reward = reward_scale * (math.log(task.get_task_mi() * w, 10) / (self.alpha * math.log(task.get_task_executing_time() * w, 10)))
-            # reward = reward_scale * (math.log(task.get_task_mi() * w, 10) / (self.alpha * math.log(task.get_task_executing_time() * w, 10) +
-            #                   self.beta * math.log(weight_ratio * w, 10)))
+            reward = reward_scale * (math.log(task.get_task_mi() * w, 10) / (self.alpha * math.log(task.get_task_executing_time() * w, 10) +
+                              self.beta * math.log(weight_ratio * w, 10)))
 
             batch_reward_list.append(reward)
             # with open(reward_save_path, 'a+') as f:

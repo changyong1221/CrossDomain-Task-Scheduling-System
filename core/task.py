@@ -31,7 +31,7 @@ class Task(object):
         return self.cpu_utilization
 
     def get_task_size(self):
-        """Return task size of current task
+        """Return task size (bytes) of current task
         """
         return self.size
 
@@ -58,13 +58,13 @@ class TaskRunInstance(Task):
                                                           glo.location_longitude,
                                                           glo.location_latitude) / glo.line_transmit_speed
         # print_log(f"line_transmit_time: {line_transmit_time} s")
-        self.task_transfer_time = round(self.size / machine.get_bandwidth() + line_transmit_time, 4)
-        self.task_waiting_time = round(max(0, machine.get_finish_time() - self.commit_time), 4)
-        self.task_executing_time = round(self.mi / machine.get_mips(), 4)
-        # self.task_executing_time = self.mi / (machine.get_mips() * self.cpu_utilization)
-        self.task_processing_time = self.task_transfer_time + self.task_waiting_time + self.task_executing_time
-        machine.set_finish_time(self.commit_time + self.task_processing_time)
-        self.is_done = True
+        self.task_waiting_time += round(max(0, machine.get_transfer_finish_time() - self.commit_time))  # 等待开始传输
+        self.task_transfer_time = round((self.size * 8) / machine.get_bandwidth() + line_transmit_time, 4)    # 任务传输时间
+        machine.set_transfer_finish_time(self.commit_time + self.task_waiting_time + self.task_transfer_time)  # 更新机器的传输完成时间
+        self.task_waiting_time += round(max(0, machine.get_execution_finish_time() - machine.get_transfer_finish_time()), 4)    # 等待开始执行
+        self.task_executing_time = round(self.mi / (machine.get_mips() * self.cpu_utilization), 4)      # 任务执行时间
+        self.task_processing_time = self.task_transfer_time + self.task_waiting_time + self.task_executing_time     # 任务总的处理时间
+        machine.set_execution_finish_time(self.commit_time + self.task_processing_time)
         scheduler_name = glo.current_scheduler
         if glo.is_federated:
             output_dir = f"results/task_run_results/federated/client-{multidomain_id}/{glo.federated_round}"
@@ -90,6 +90,7 @@ class TaskRunInstance(Task):
                            self.task_executing_time, self.task_processing_time]
             write_list_to_file(output_list, output_path, mode='a+')
         print_log(f"task({self.task_id}) finished, processing time: {round(self.task_processing_time, 4)} s")
+        self.is_done = True
 
     def get_task_processing_time(self):
         """Return task processing time

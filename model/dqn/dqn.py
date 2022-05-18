@@ -13,7 +13,7 @@ from utils.log import print_log
 from utils.state_representation import balancing, get_machine_kind_idx, task_adapting
 import globals.global_var as glo
 
-GAMMA = 0.9  # reward discount，惩罚项
+GAMMA = 0.1  # reward discount，惩罚项
 TARGET_REPLACE_ITER = 5  # target update frequency，每过多少轮更新TargetNet
 
 
@@ -337,28 +337,28 @@ class DQN(object):
             self.optimizer.step()
             
             # 将Q值保存到文件中
-            q_value_save_path = f"backup/test-0517/D3QN-OPT/train10/q_target_prime.txt"
+            q_value_save_path = f"backup/test-0517/D3QN-OPT/train11/q_target_prime.txt"
             with open(q_value_save_path, 'a+') as f:
                 q_target_list = q_target_prime.tolist()
                 q_value = np.mean(q_target_list)
                 f.write(str(round(q_value, 3)) + "\n")
                 
             # 将breward值保存到文件中
-            breward_save_path = f"backup/test-0517/D3QN-OPT/train10/breward.txt"
+            breward_save_path = f"backup/test-0517/D3QN-OPT/train11/breward.txt"
             with open(breward_save_path, 'a+') as f:
                 breward_list = self.breward.tolist()
                 breward = np.mean(breward_list)
                 f.write(str(round(breward, 3)) + "\n")
             
             # 将Q值保存到文件中
-            q_value_save_path = f"backup/test-0517/D3QN-OPT/train10/q_value.txt"
+            q_value_save_path = f"backup/test-0517/D3QN-OPT/train11/q_value.txt"
             with open(q_value_save_path, 'a+') as f:
                 q_target_list = q_target.tolist()
                 q_value = np.mean(q_target_list)
                 f.write(str(round(q_value, 3)) + "\n")
 
             # 将loss保存到文件中
-            loss_save_path = f"backup/test-0517/D3QN-OPT/train10/loss.txt"
+            loss_save_path = f"backup/test-0517/D3QN-OPT/train11/loss.txt"
             with open(loss_save_path, 'a+') as f:
                 f.write(str(round(loss.item(), 3)) + "\n")
         else:
@@ -413,28 +413,28 @@ class DQN(object):
             self.optimizer.step()
             
             # 将Q值保存到文件中
-            q_value_save_path = f"backup/test-0517/D3QN-OPT/train10/q_target_prime.txt"
+            q_value_save_path = f"backup/test-0517/D3QN-OPT/train11/q_target_prime.txt"
             with open(q_value_save_path, 'a+') as f:
                 q_target_list = q_next.max(1)[0].view(self.batch_size, 1).tolist()
                 q_value = np.mean(q_target_list)
                 f.write(str(round(q_value, 3)) + "\n")
                 
             # 将breward值保存到文件中
-            breward_save_path = f"backup/test-0517/D3QN-OPT/train10/breward.txt"
+            breward_save_path = f"backup/test-0517/D3QN-OPT/train11/breward.txt"
             with open(breward_save_path, 'a+') as f:
                 breward_list = self.breward.tolist()
                 breward = np.mean(breward_list)
                 f.write(str(round(breward, 3)) + "\n")
             
             # 将Q值保存到文件中
-            q_value_save_path = f"backup/test-0517/D3QN-OPT/train10/q_value.txt"
+            q_value_save_path = f"backup/test-0517/D3QN-OPT/train11/q_value.txt"
             with open(q_value_save_path, 'a+') as f:
                 q_target_list = q_target.tolist()
                 q_value = np.mean(q_target_list)
                 f.write(str(round(q_value, 3)) + "\n")
 
             # 将loss保存到文件中
-            loss_save_path = f"backup/test-0517/D3QN-OPT/train10/loss.txt"
+            loss_save_path = f"backup/test-0517/D3QN-OPT/train11/loss.txt"
             with open(loss_save_path, 'a+') as f:
                 f.write(str(round(loss.item(), 3)) + "\n")
 

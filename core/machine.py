@@ -20,6 +20,8 @@ class Machine(object):
         self.realtime_memory_utilization = 0
         self.realtime_bandwidth_utilization = 0
         self.finish_time = 0
+        self.transfer_finish_time = 0   # timestamp
+        self.execution_finish_time = 0  # timestamp
         self.work_time = 0
         self.batch_makespan = 0
         self.task_waiting_queue = []
@@ -36,10 +38,6 @@ class Machine(object):
         self.batch_makespan = 0
         for task in self.task_waiting_queue:
             task.run_on_machine(self, multidomain_id)
-            self.work_time += task.get_task_executing_time()
-            self.batch_makespan += task.get_task_executing_time()
-            # self.work_time += task.get_task_processing_time()
-            # self.batch_makespan += task.get_task_processing_time()
             self.realtime_cpu_utilization = task.get_task_cpu_utilization()
             self.realtime_memory_utilization = round(task.get_task_size() / self.memory, 4)
             self.realtime_bandwidth_utilization = 1
@@ -52,7 +50,7 @@ class Machine(object):
                     output_dir = f"results/machine_status_results/federated/federated_test/{scheduler_name}/{glo.federated_round}"
                     check_and_build_dir(output_dir)
                     output_path = output_dir + f"/{self.machine_id}_status.txt"
-                output_list = [self.work_time, self.realtime_cpu_utilization, self.realtime_memory_utilization,
+                output_list = [self.realtime_cpu_utilization, self.realtime_memory_utilization,
                                self.realtime_bandwidth_utilization]
                 write_list_to_file(output_list, output_path, mode='a+')
             else:
@@ -61,9 +59,20 @@ class Machine(object):
                     output_dir += f"{glo.current_batch_size}/"
                 check_and_build_dir(output_dir)
                 output_path = output_dir + f"{self.machine_id}_status2.txt"
-                output_list = [self.work_time, self.realtime_cpu_utilization, self.realtime_memory_utilization,
+                output_list = [self.realtime_cpu_utilization, self.realtime_memory_utilization,
                                self.realtime_bandwidth_utilization]
                 write_list_to_file(output_list, output_path, mode='a+')
+        # batch makespan一个batch只有一个
+        self.batch_makespan = self.execution_finish_time - task_waiting_queue[0].commit_time
+        self.work_time += self.batch_makespan
+        
+        output_dir = f"results/machine_status_results/{glo.current_dataset}{glo.records_num}/{scheduler_name}/"
+        if glo.current_batch_size != 0:
+            output_dir += f"{glo.current_batch_size}/"
+        check_and_build_dir(output_dir)
+        output_path = output_dir + f"{self.machine_id}_batch_status.txt"
+        output_list = [self.batch_makespan, self.work_time]
+        write_list_to_file(output_list, output_path, mode='a+')
         self.task_waiting_queue.clear()
 
     def set_location(self, longitude, latitude):
@@ -110,6 +119,26 @@ class Machine(object):
         """Set a new finish time
         """
         self.finish_time = new_finish_time
+        
+    def get_transfer_finish_time(self):
+        """Return transfer_finish_time
+        """
+        return self.transfer_finish_time
+
+    def set_transfer_finish_time(self, new_finish_time):
+        """Set a new transfer finish time
+        """
+        self.transfer_finish_time = new_finish_time
+
+    def get_execution_finish_time(self):
+        """Return execution_finish_time
+        """
+        return self.execution_finish_time
+
+    def set_execution_finish_time(self, new_finish_time):
+        """Set a new execution finish time
+        """
+        self.execution_finish_time = new_finish_time
 
     def get_batch_makespan(self):
         """Return batch_makespan
