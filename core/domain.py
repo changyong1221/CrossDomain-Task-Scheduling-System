@@ -177,7 +177,7 @@ class MultiDomain(object):
 
             self.run_tasks()
         elif self.scheduler.__class__.__name__ == "DQNScheduler":
-            schedule_ret = self.scheduler.schedule(task_list, self.machine_list)
+            schedule_ret = self.scheduler.schedule(task_list)
             for idx, machine_id in enumerate(schedule_ret):
                 self.machine_list[machine_id].add_task(task_list[idx])
 
@@ -185,7 +185,7 @@ class MultiDomain(object):
             makespan = 0
             for machine in self.machine_list:
                 makespan = max(makespan, machine.get_batch_makespan())
-            self.scheduler.learn(task_list, schedule_ret, makespan, self.machine_list)
+            self.scheduler.learn(task_list, schedule_ret, makespan)
         elif self.scheduler.__class__.__name__ == "DDPGScheduler":
             schedule_ret = self.scheduler.schedule(task_list, self.machine_list)
             for idx, machine_id in enumerate(schedule_ret):

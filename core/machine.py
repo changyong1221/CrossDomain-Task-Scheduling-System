@@ -36,8 +36,10 @@ class Machine(object):
         self.batch_makespan = 0
         for task in self.task_waiting_queue:
             task.run_on_machine(self, multidomain_id)
-            self.work_time += task.get_task_processing_time()
-            self.batch_makespan += task.get_task_processing_time()
+            self.work_time += task.get_task_executing_time()
+            self.batch_makespan += task.get_task_executing_time()
+            # self.work_time += task.get_task_processing_time()
+            # self.batch_makespan += task.get_task_processing_time()
             self.realtime_cpu_utilization = task.get_task_cpu_utilization()
             self.realtime_memory_utilization = round(task.get_task_size() / self.memory, 4)
             self.realtime_bandwidth_utilization = 1

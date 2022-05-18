@@ -44,13 +44,13 @@ def inter_domain_scheduling(test_batch_size=0):
         multi_domain.add_domain(domain)
 
     # 6. load tasks
-    glo.records_num = 5000
-    glo.current_dataset = "GoCJ"
-    # glo.records_num = 100000
-    # glo.current_dataset = "Alibaba"
+    # glo.records_num = 5000
+    # glo.current_dataset = "GoCJ"
+    glo.records_num = 500000
+    glo.current_dataset = "Alibaba"
     # glo.current_batch_size = test_batch_size
-    # task_file_path = f"dataset/Alibaba/Alibaba-Cluster-trace-{glo.records_num}-test.txt"
-    task_file_path = f"dataset/GoCJ/GoCJ_Dataset_{glo.records_num}batches_40concurrency_test.txt"
+    task_file_path = f"dataset/Alibaba/Alibaba-Cluster-trace-{glo.records_num}-train.txt"
+    # task_file_path = f"dataset/GoCJ/GoCJ_Dataset_{glo.records_num}batches_40concurrency_test.txt"
     # task_file_path = f"dataset/Alibaba/batch/Alibaba-Cluster-trace-{glo.current_batch_size}-batch-test.txt"
     task_batch_list = load_task_batches_from_file(task_file_path, delimiter='\t')
 
@@ -71,15 +71,16 @@ def inter_domain_scheduling(test_batch_size=0):
     # scheduler = HeuristicScheduler(machine_list)
     # D3QN
     # epsilon_dec = 1.0
-    epsilon_dec = 0.998
+    # epsilon_dec = 0.99999
+    epsilon_dec = 0.9996
     prob = 0.5
-    balance_prob = 0.3
+    balance_prob = 0.9
     
     glo.is_federated = False
     glo.is_test = False
     machine_kind_num_list, machine_kind_idx_range_list = get_machine_kind_list(machine_list)
     
-    scheduler = DQNScheduler(multi_domain.multidomain_id, machine_num, task_batch_num, machine_kind_num_list,
+    scheduler = DQNScheduler(multi_domain.multidomain_id, machine_list, machine_num, task_batch_num, machine_kind_num_list,
                              machine_kind_idx_range_list, is_federated=glo.is_federated, epsilon_decay=epsilon_dec, prob=prob, balance_prob=balance_prob)
     # DDPG
     # scheduler = DDPGScheduler(machine_num, task_batch_num)

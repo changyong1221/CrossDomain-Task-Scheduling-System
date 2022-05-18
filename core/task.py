@@ -106,3 +106,19 @@ class TaskRunInstance(Task):
             return self.task_waiting_time
         else:
             return -1
+            
+    def get_task_executing_time(self):
+        """Return task executing time
+        """
+        if self.is_done:
+            return self.task_executing_time
+        else:
+            return -1
+            
+    def get_task_transfer_time(self):
+        """Return task transfer time
+        """
+        if self.is_done:
+            return self.task_transfer_time
+        else:
+            return -1

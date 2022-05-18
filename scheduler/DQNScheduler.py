@@ -23,7 +23,10 @@ class DQNScheduler(Scheduler):
         self.action_all = []  # 存储所有的动作 [None,1]
         self.reward_all = []  # 存储所有的奖励 [None,1]
         self.machine_list = machine_list
-        self.machine_weight_list = get_machine_weight(machine_list)
+        # self.machine_weight_list = get_machine_weight(machine_list)
+        # 实际machine weight list = [0.0026595744680851063, 0.0026595744680851063, 0.005319148936170213, 0.005319148936170213, 0.02127659574468085, 0.02127659574468085, 0.026595744680851064, 0.026595744680851064, 0.026595744680851064, 0.031914893617021274, 0.031914893617021274, 0.031914893617021274, 0.031914893617021274, 0.0425531914893617, 0.06382978723404255, 0.0851063829787234, 0.09574468085106383, 0.1276595744680851, 0.1595744680851064, 0.1595744680851064]
+        # 微调machine weight list
+        self.machine_weight_list = [0.0047619,0.00952381,0.01428571,0.01904762,0.02380952,0.02857143,0.03333333,0.03809524,0.04285714,0.04761905,0.05238095,0.05714286,0.06190476,0.06666667,0.07142857,0.07619048,0.08095238,0.08571429,0.09047619,0.0952381]
         self.machine_kind_idx_range_list = machine_kind_idx_range_list
         self.machine_assigned_task_list = [(int)(self.machine_weight_list[i] * 1000) for i in range(machine_num)]
         self.cur_weight_list = self.machine_weight_list[:]
@@ -48,8 +51,8 @@ class DQNScheduler(Scheduler):
         task_num = len(task_instance_batch)
 
         states = get_state(task_instance_batch, self.machine_list, self.cur_weight_list)
-        self.state_all += states
-        # self.state_all.append(states)
+        # self.state_all += states
+        # self.state_all.append(states) # 这里不能用append，必须用+=，+=只append内部元素
         machines_id = self.DRL.choose_action(np.array(states))  # 通过调度算法得到分配 id
         machines_id = machines_id.astype(int).tolist()
         return machines_id
@@ -70,17 +73,18 @@ class DQNScheduler(Scheduler):
         # m_std = compute_std(machine_weight_list, self.machine_assigned_task_list)
         
         
-        reward_save_path = f"backup/test-0517/D3QN-OPT/train3/reward.txt"
-        action_save_path = f"backup/test-0517/D3QN-OPT/train3/action.txt"
-        info_save_path = f"backup/test-0517/D3QN-OPT/train3/info.txt"
+        reward_save_path = f"backup/test-0517/D3QN-OPT/train10/reward.txt"
+        action_save_path = f"backup/test-0517/D3QN-OPT/train10/action.txt"
+        info_save_path = f"backup/test-0517/D3QN-OPT/train10/info.txt"
         
+        states = get_state(task_instance_batch, self.machine_list, self.cur_weight_list)
+
         batch_reward_list = []
+        batch_remain_num = 20
         for idx, task in enumerate(task_instance_batch):  # 便历新提交的一批任务，记录动作和奖励
             machine_id = machines_id[idx]
-            self.action_all.append([machine_id])
+            
             self.machine_assigned_task_list[machine_id] += 1
-            with open(action_save_path, 'a+') as f:
-                f.write(f"{machine_id}\n")
 
             # reward = self.C / (self.alpha * math.log(task_item, 10) +
             #                   self.beta * math.log(makespan_item, 10))
@@ -112,12 +116,10 @@ class DQNScheduler(Scheduler):
             #     reward_scale = m_wait_elem
             # print(reward_scale)
             # exit()
-            # reward = reward_scale * (self.alpha * math.log(task.get_task_mi() * w, 10) / (math.log(task.get_task_executing_time() * w, 10)) +
-            #                   self.beta * 20 / weight_ratio)
-            reward = reward_scale * (math.log(task.get_task_mi() * w, 10) / (self.alpha * math.log(task.get_task_executing_time() * w, 10) +
-                              self.beta * math.log(weight_ratio * w, 10)))
-            with open(info_save_path, 'a+') as f:
-                f.write(f"{round(reward,3)}\t{task.get_task_mi()}\t{task.get_task_executing_time()}\t{math.log(task.get_task_executing_time() * w, 10)}\t{math.log(weight_ratio * w, 10)}\t{weight_ratio}\t{reward_scale}\t{machine_id}\n")
+            reward = reward_scale * (math.log(task.get_task_mi() * w, 10) / (self.beta * math.log(weight_ratio * w, 10)))
+            # reward = reward_scale * (math.log(task.get_task_mi() * w, 10) / (self.alpha * math.log(task.get_task_executing_time() * w, 10)))
+            # reward = reward_scale * (math.log(task.get_task_mi() * w, 10) / (self.alpha * math.log(task.get_task_executing_time() * w, 10) +
+            #                   self.beta * math.log(weight_ratio * w, 10)))
 
             batch_reward_list.append(reward)
             # with open(reward_save_path, 'a+') as f:
@@ -130,7 +132,20 @@ class DQNScheduler(Scheduler):
             # print("task_mi: ", task.get_task_mi())
             # print("task_processing_time: ", task.get_task_processing_time())
             # print("reward: ", reward)
-            self.reward_all.append([reward])  # 计算奖励
+            
+            # 加入replay memory
+            if batch_remain_num > 0:
+                self.state_all.append(states[idx])
+                self.action_all.append([machine_id])
+                self.reward_all.append([reward])
+                
+                with open(action_save_path, 'a+') as f:
+                    f.write(f"{machine_id}\n")
+                with open(info_save_path, 'a+') as f:
+                    f.write(f"{round(reward,3)}\t{task.get_task_mi()}\t{task.get_task_executing_time()}\t{math.log(task.get_task_executing_time() * w, 10)}\t{machine_id}\n")
+                # with open(info_save_path, 'a+') as f:
+                    # f.write(f"{round(reward,3)}\t{task.get_task_mi()}\t{task.get_task_executing_time()}\t{math.log(task.get_task_executing_time() * w, 10)}\t{math.log(weight_ratio * w, 10)}\t{weight_ratio}\t{reward_scale}\t{machine_id}\n")
+                batch_remain_num -= 1
         
         reward_mean = np.mean(np.array(batch_reward_list))
         with open(reward_save_path, 'a+') as f:

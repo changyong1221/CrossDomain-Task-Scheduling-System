@@ -17,9 +17,9 @@ from utils.plt_config import PltConfig
 
 def analyze_machine_results():
     # 1. settings
-    idx = 6
+    idx = 0
     schedulers = ["DQNScheduler", "DQNScheduler", "DDPGScheduler", "RoundRobinScheduler", "RandomScheduler", "EarliestScheduler", "HeuristicScheduler"]
-    labels = ["D3QN-OPT", "D3QN", "DDPG", "RR", "Random", "Earliest", "GA"]
+    labels = ["D3QN-OPT2", "D3QN", "DDPG", "RR", "Random", "Earliest", "GA"]
     # idx = 4
     # schedulers = ["RR", "Random", "Earliest", "GA", "DQN", "DDPG"]
     # path_list = [
@@ -31,7 +31,8 @@ def analyze_machine_results():
     #     "../results/machine_status_results/DDPGScheduler",
     # ]
     # path = path_list[idx]
-    path = f"{labels[idx]}/test/machine_status_results/GoCJ5000/{schedulers[idx]}"
+    dataset_str = "Alibaba500000"
+    path = f"{labels[idx]}/test/machine_status_results/{dataset_str}/{schedulers[idx]}"
     machine_num = 20
 
     # 1. 机器工作时间（machine work time）
@@ -46,21 +47,21 @@ def analyze_machine_results():
         machine_work_time_list.append(machine_work_time)
         machine_assigned_tasks_num_list.append(len(machine_data))
     # 展示并保存机器工作时间图
-    dest_path = f"{labels[idx]}/test/machine_work_time_{schedulers[idx]}_20machine_GoCJ5000batches40concurrency.png"
+    dest_path = f"{labels[idx]}/test/machine_work_time_{schedulers[idx]}_20machine_{dataset_str}.png"
     plt_config = PltConfig()
-    plt_config.title = f"machine work time using DDPGScheduler"
+    plt_config.title = f"machine work time using {schedulers[idx]}"
     plt_config.xlabel = "machine id"
     plt_config.ylabel = "machine work time"
     plt_config.x_axis_data = [str(i) for i in range(machine_num)]
-    save_to_histogram_from_list(machine_work_time_list, dest_path, plt_config, show=True, show_text=False)
+    save_to_histogram_from_list(machine_work_time_list, dest_path, plt_config, show=False, show_text=False)
     # 展示并保存机器分配任务数图
-    dest_path = f"{labels[idx]}/test/machine_assigned_tasks_num_{schedulers[idx]}_20machine_GoCJ5000batches40concurrency.png"
+    dest_path = f"{labels[idx]}/test/machine_assigned_tasks_num_{schedulers[idx]}_20machine_{dataset_str}.png"
     plt_config = PltConfig()
     plt_config.title = f"machine assigned tasks number using {schedulers[idx]}"
     plt_config.xlabel = "machine id"
     plt_config.ylabel = "machine assigned tasks number"
     plt_config.x_axis_data = [str(i) for i in range(machine_num)]
-    save_to_histogram_from_list(machine_assigned_tasks_num_list, dest_path, plt_config, show=True, show_text=True)
+    save_to_histogram_from_list(machine_assigned_tasks_num_list, dest_path, plt_config, show=False, show_text=True)
 
 def compute_avg_task_process_time():
     """Compute average task process time of different scheduling algorightm

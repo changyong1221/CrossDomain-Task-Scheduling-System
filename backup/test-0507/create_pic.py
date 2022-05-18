@@ -9,7 +9,7 @@ import pandas as pd
 
 
 def plot_data_loss():
-    data = pd.read_csv("DQN3/test/loss.txt", header=None)
+    data = pd.read_csv("D3QN-OPT7/test/loss.txt", header=None)
     data.columns = ['loss']
     data_list = data['loss'].tolist()
     # 指定画布大小
@@ -26,12 +26,12 @@ def plot_data_loss():
     # 设置图例
     # plt.legend(loc='best')
     # 保存图片
-    plt.savefig(f"DQN3/test/testing_loss.png")
+    plt.savefig(f"D3QN-OPT7/test/testing_loss_2.png")
     # 展示折线图
     # plt.show()
 
 def plot_data_reward():
-    data = pd.read_csv("DQN3/test/reward.txt", header=None)
+    data = pd.read_csv("D3QN-OPT7/test/reward.txt", header=None)
     data.columns = ['reward']
     data_list = data['reward'].tolist()
     # 指定画布大小
@@ -49,12 +49,12 @@ def plot_data_reward():
     # 设置图例
     # plt.legend(loc='best')
     # 保存图片
-    plt.savefig(f"DQN3/test/testing_reward_3.png")
+    plt.savefig(f"D3QN-OPT7/test/testing_reward_2.png")
     # 展示折线图
     # plt.show()
 
 def plot_data_q_value():
-    data = pd.read_csv("DQN3/test/q_value.txt", header=None)
+    data = pd.read_csv("D3QN-OPT7/test/q_value.txt", header=None)
     data.columns = ['q_value']
     data_list = data['q_value'].tolist()
     # 指定画布大小
@@ -71,12 +71,12 @@ def plot_data_q_value():
     # 设置图例
     # plt.legend(loc='best')
     # 保存图片
-    plt.savefig(f"DQN3/test/testing_q_value.png")
+    plt.savefig(f"D3QN-OPT7/test/testing_q_value_2.png")
     # 展示折线图
     # plt.show()
 
 def plot_action():
-    data = pd.read_csv("DQN3/test/action.txt", header=None, delimiter='\t')
+    data = pd.read_csv("D3QN-OPT7/test/action.txt", header=None, delimiter='\t')
     data.columns = ['task_mi', 'action']
     data_list = data['action'].tolist()
     # 指定画布大小
@@ -110,7 +110,7 @@ def plot_action():
     # 设置图例
     # plt.legend(loc='best')
     # 保存图片
-    plt.savefig(f"DQN3/test/testing_action.png")
+    plt.savefig(f"D3QN-OPT7/test/testing_action_2.png")
     # 展示折线图
     # plt.show()
 

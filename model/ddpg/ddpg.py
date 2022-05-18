@@ -88,16 +88,16 @@ class DDPG(object):
         adict = {}  # 标记每个VM出现次数，实现负载均衡
         s_task_num = len(s_list)
 
-        # 后面的代码增加分配VM的负载均衡，也是对动作的探索，融入了轮寻算法
-        for i in range(s_task_num):
-            if actions[i] not in adict:
-                adict[actions[i]] = 1
-            else:
-                adict[actions[i]] += 1
-        for i in range(s_task_num):
-            # 如果VM被分配的任务个数大于2，按后面的概率随机给任务分配VM
-            if adict[actions[i]] > int(s_task_num / self.vms_num): # and np.random.uniform() > 0.5:
-                actions[i] = np.random.randint(self.vms_num)  # randint范围: [,]
+        # # 后面的代码增加分配VM的负载均衡，也是对动作的探索，融入了轮寻算法
+        # for i in range(s_task_num):
+        #     if actions[i] not in adict:
+        #         adict[actions[i]] = 1
+        #     else:
+        #         adict[actions[i]] += 1
+        # for i in range(s_task_num):
+        #     # 如果VM被分配的任务个数大于2，按后面的概率随机给任务分配VM
+        #     if adict[actions[i]] > int(s_task_num / self.vms_num): # and np.random.uniform() > 0.5:
+        #         actions[i] = np.random.randint(self.vms_num)  # randint范围: [,]
         print("actions: ", actions)
         return actions
 
@@ -122,7 +122,7 @@ class DDPG(object):
         self.ctrain.step()
         
         # 将Q值保存到文件中
-        q_value_save_path = f"backup/test-0506/DDPG/test/q_value.txt"
+        q_value_save_path = f"backup/test-0508/DDPG/test/q_value.txt"
         with open(q_value_save_path, 'a+') as f:
             q_target_list = q_target.tolist()
             q_value = np.mean(q_target_list)
@@ -133,7 +133,7 @@ class DDPG(object):
         loss_a = self.loss_td(self.baction_well, a)
         
         # 将loss保存到文件中
-        loss_save_path = f"backup/test-0506/DDPG/test/loss.txt"
+        loss_save_path = f"backup/test-0508/DDPG/test/loss.txt"
         with open(loss_save_path, 'a+') as f:
             f.write(str(round(loss_a.item(), 3)) + "\n")
         

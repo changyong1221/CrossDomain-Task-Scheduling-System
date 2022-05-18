@@ -14,14 +14,14 @@ from utils.state_representation import balancing, get_machine_kind_idx, task_ada
 import globals.global_var as glo
 
 GAMMA = 0.9  # reward discount，惩罚项
-TARGET_REPLACE_ITER = 1  # target update frequency，每过多少轮更新TargetNet
+TARGET_REPLACE_ITER = 5  # target update frequency，每过多少轮更新TargetNet
 
 
 class DQN(object):
     # 每次把一个任务分配给一个虚拟机
     def __init__(self, multidomain_id, task_dim, vms, vm_dim, machine_kind_num_list, machine_kind_idx_range_list,
                  double_dqn=False, dueling_dqn=False, optimized_dqn=False,
-                 use_prioritized_memory=False, is_federated=False, epsilon_decay=0.998, prob=0.5, balance_prob=0.5):
+                 use_prioritized_memory=False, is_federated=False, epsilon_decay=0.998, prob=0.5, balance_prob=0.5, machine_weight_list=None):
         self.multidomain_id = multidomain_id
         self.task_dim = task_dim  # 任务维度
         self.vms = vms  # 虚拟机数量
@@ -46,6 +46,7 @@ class DQN(object):
         self.epsilon = 0.95   # epsilon初始值
         # self.epsilon = 0.1
         # self.epsilon = 1.0
+        # self.epsilon = 0
         # self.epsilon_decay = 0.998  # epsilon退化率
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = 0.1      # epsilon最小值
@@ -55,6 +56,8 @@ class DQN(object):
         self.prob = prob
 
         # 均衡策略
+        self.machine_weight_list = machine_weight_list
+        self.accu_machine_weight_list = [np.sum(machine_weight_list[:i+1]) for i in range(len(machine_weight_list))]
         self.machine_kind_num_list = machine_kind_num_list                  # 记录每类机器的数目
         self.machine_kind_idx_range_list = machine_kind_idx_range_list      # 记录每类机器的索引范围
         self.num_of_machine_kind = len(self.machine_kind_num_list)          # 按性能分类的机器种类数目
@@ -148,26 +151,59 @@ class DQN(object):
 
             # adict = {}  # 标记每个VM出现次数，实现负载均衡
             # s_task_num = len(s_list)
+            # # print(f"s_task_num: {s_task_num}")
 
             # # 后面的代码增加分配VM的负载均衡，也是对动作的探索，融入了轮寻算法
-            # if (np.random.uniform() > self.prob):
-            #     for i in range(s_task_num):
-            #         if actions[i] not in adict:
-            #             adict[actions[i]] = 1
-            #         else:
-            #             adict[actions[i]] += 1
-            #     for i in range(s_task_num):
-            #         # 如果VM被分配的任务个数大于2，按后面的概率随机给任务分配VM
-            #         # if adict[actions[i]] > int(s_task_num / self.vms_num) and np.random.uniform() > self.prob:
-            #         if adict[actions[i]] > int(s_task_num / self.vms_num):
-            #             actions[i] = np.random.randint(self.vms_num)  # randint范围: [,]
+            # # print(f"before: {actions}")
+            # for i in range(s_task_num):
+            #     if actions[i] not in adict:
+            #         adict[actions[i]] = 1
+            #     else:
+            #         adict[actions[i]] += 1
+            # for i in range(s_task_num):
+            #     # 如果VM被分配的任务个数大于2，按后面的概率随机给任务分配VM
+            #     if adict[actions[i]] > int(s_task_num * self.machine_weight_list[actions[i]]):
+            #         adict[actions[i]] -= 1
+            #         rand_prob = np.random.uniform()
+            #         for j, prob in enumerate(self.accu_machine_weight_list):
+            #             if rand_prob <= prob:
+            #                 actions[i] = j
+            #                 break
+
+            #         # actions[i] = np.random.randint(self.vms_num)  # randint范围: [,]
+            # # print(f"after: {actions}")
             print("net choose!")
         else:
+            # 加权负载均衡方法
+            # action_list = [0 for i in range(len(s_list))]
+            # for i in range(len(s_list)):
+            #     rand_prob = np.random.uniform()
+            #     for j, prob in enumerate(self.accu_machine_weight_list):
+            #         if rand_prob <= prob:
+            #             action_list[i] = j
+            #             break
+            
+            # 阶梯平衡因子负载均衡方法
+            # action_list = [0 for i in range(len(s_list))]
+            # for i, action in enumerate(action_list):
+            #     action = balancing(self.machine_kind_avg_task_map, self.num_of_machine_kind,
+            #                       self.machine_kind_idx_range_list, self.balance_factor_min,
+            #                       self.balance_factor_max)
+            #     action_list[i] = action
+            #     self.machine_task_map[action] += 1
+            #     kind_idx = get_machine_kind_idx(action, self.num_of_machine_kind, self.machine_kind_idx_range_list)
+            #     self.machine_kind_task_map[kind_idx] += 1
+            #     self.machine_kind_avg_task_map[kind_idx] = self.machine_kind_task_map[kind_idx] / \
+            #                                               self.machine_kind_num_list[kind_idx]
+            
+            # 任务亲和度和阶梯平衡因子结合的方法，因为任务亲和度需要事先指定任务大小，已被废弃
             # action_list = [0 for i in range(len(s_list))]
             # for i, action in enumerate(action_list):
             #     if np.random.random() < self.balance_prob:
             #         if np.random.random() < self.task_affinity_factor:
             #             action = task_adapting(s_list[i], self.num_of_machine_kind, self.machine_kind_idx_range_list)
+            #         else:
+            #             action = np.random.randint(self.vms_num)
             #     else:
             #         action = balancing(self.machine_kind_avg_task_map, self.num_of_machine_kind,
             #                           self.machine_kind_idx_range_list, self.balance_factor_min,
@@ -178,37 +214,58 @@ class DQN(object):
             #     self.machine_kind_task_map[kind_idx] += 1
             #     self.machine_kind_avg_task_map[kind_idx] = self.machine_kind_task_map[kind_idx] / \
             #                                               self.machine_kind_num_list[kind_idx]
-            #     print("balance choose!")
+            # print("balance choose!")
             
-            # completely random
+            # 随机分配法
             # action_list = [0 for i in range(len(s_list))]
             # for i, action in enumerate(action_list):
             #     action_list[i] = np.random.randint(self.vms_num)
             # print("random choose!")
             
-            # optimized
-            if self.step < 200:
+            # 随机分配和阶梯平衡因子结合的方法
+            if self.step < 300:
                 action_list = [0 for i in range(len(s_list))]
                 for i, action in enumerate(action_list):
                     action_list[i] = np.random.randint(self.vms_num)
                 print("random choose!")
             else:
-                action_list = [0 for i in range(len(s_list))]
-                for i, action in enumerate(action_list):
-                    if np.random.random() < self.balance_prob:
-                        if np.random.random() < self.task_affinity_factor:
-                            action = task_adapting(s_list[i], self.num_of_machine_kind, self.machine_kind_idx_range_list)
-                    else:
+                if np.random.random() > self.balance_prob:
+                    action_list = [0 for i in range(len(s_list))]
+                    for i, action in enumerate(action_list):
+                        action_list[i] = np.random.randint(self.vms_num)
+                    print("random choose!")
+                else:
+                    action_list = [0 for i in range(len(s_list))]
+                    for i, action in enumerate(action_list):
                         action = balancing(self.machine_kind_avg_task_map, self.num_of_machine_kind,
                                           self.machine_kind_idx_range_list, self.balance_factor_min,
                                           self.balance_factor_max)
-                    action_list[i] = action
-                    self.machine_task_map[action] += 1
-                    kind_idx = get_machine_kind_idx(action, self.num_of_machine_kind, self.machine_kind_idx_range_list)
-                    self.machine_kind_task_map[kind_idx] += 1
-                    self.machine_kind_avg_task_map[kind_idx] = self.machine_kind_task_map[kind_idx] / \
-                                                              self.machine_kind_num_list[kind_idx]
+                        action_list[i] = action
+                        self.machine_task_map[action] += 1
+                        kind_idx = get_machine_kind_idx(action, self.num_of_machine_kind, self.machine_kind_idx_range_list)
+                        self.machine_kind_task_map[kind_idx] += 1
+                        self.machine_kind_avg_task_map[kind_idx] = self.machine_kind_task_map[kind_idx] / \
+                                                                  self.machine_kind_num_list[kind_idx]
                     print("balance choose!")
+
+            # if self.step < 1000:
+            #     action_list = [0 for i in range(len(s_list))]
+            #     for i, action in enumerate(action_list):
+            #         action_list[i] = np.random.randint(self.vms_num)
+            #     print("random choose!")
+            # else:
+            #     action_list = [0 for i in range(len(s_list))]
+            #     for i, action in enumerate(action_list):
+            #         action = balancing(self.machine_kind_avg_task_map, self.num_of_machine_kind,
+            #                           self.machine_kind_idx_range_list, self.balance_factor_min,
+            #                           self.balance_factor_max)
+            #         action_list[i] = action
+            #         self.machine_task_map[action] += 1
+            #         kind_idx = get_machine_kind_idx(action, self.num_of_machine_kind, self.machine_kind_idx_range_list)
+            #         self.machine_kind_task_map[kind_idx] += 1
+            #         self.machine_kind_avg_task_map[kind_idx] = self.machine_kind_task_map[kind_idx] / \
+            #                                                   self.machine_kind_num_list[kind_idx]
+            #     print("balance choose!")
             actions = np.array(action_list)
         print("actions: ", actions)
         return actions
@@ -252,7 +309,7 @@ class DQN(object):
             q_eval = self.eval_net(self.bstate).gather(1, self.baction)  # shape (batch, 1), gather表示获取每个维度action为下标的Q值
             # print_log("q_eval: ", q_eval)
 
-            self.target_net.eval()
+            self.target_net.train()
             q_next = self.target_net(self.bstate_).detach()  # 设置 Target Net 不需要梯度
 
             # 先用Q_eval即最新的神经网络估计Q_next即Q现实中的Q(S',a')中的最大动作值所对应的索引
@@ -278,6 +335,32 @@ class DQN(object):
             loss.backward()
             # 更新所有参数
             self.optimizer.step()
+            
+            # 将Q值保存到文件中
+            q_value_save_path = f"backup/test-0517/D3QN-OPT/train10/q_target_prime.txt"
+            with open(q_value_save_path, 'a+') as f:
+                q_target_list = q_target_prime.tolist()
+                q_value = np.mean(q_target_list)
+                f.write(str(round(q_value, 3)) + "\n")
+                
+            # 将breward值保存到文件中
+            breward_save_path = f"backup/test-0517/D3QN-OPT/train10/breward.txt"
+            with open(breward_save_path, 'a+') as f:
+                breward_list = self.breward.tolist()
+                breward = np.mean(breward_list)
+                f.write(str(round(breward, 3)) + "\n")
+            
+            # 将Q值保存到文件中
+            q_value_save_path = f"backup/test-0517/D3QN-OPT/train10/q_value.txt"
+            with open(q_value_save_path, 'a+') as f:
+                q_target_list = q_target.tolist()
+                q_value = np.mean(q_target_list)
+                f.write(str(round(q_value, 3)) + "\n")
+
+            # 将loss保存到文件中
+            loss_save_path = f"backup/test-0517/D3QN-OPT/train10/loss.txt"
+            with open(loss_save_path, 'a+') as f:
+                f.write(str(round(loss.item(), 3)) + "\n")
         else:
             # 训练Q网络
             self.eval_net.train()
@@ -322,25 +405,38 @@ class DQN(object):
 
                 loss = self.loss_f(q_eval, q_target)
 
-
-            # 将Q值保存到文件中
-            q_value_save_path = f"backup/test-0506/D3QN-OPT4/test/q_value.txt"
-            with open(q_value_save_path, 'a+') as f:
-                q_target_list = q_target.tolist()
-                q_value = np.mean(q_target_list)
-                f.write(str(round(q_value, 3)) + "\n")
-
-            # 将loss保存到文件中
-            loss_save_path = f"backup/test-0506/D3QN-OPT4/test/loss.txt"
-            with open(loss_save_path, 'a+') as f:
-                f.write(str(round(loss.item(), 3)) + "\n")
-
             # 将梯度初始化为零
             self.optimizer.zero_grad()
             # 反向传播求梯度
             loss.backward()
             # 更新所有参数
             self.optimizer.step()
+            
+            # 将Q值保存到文件中
+            q_value_save_path = f"backup/test-0517/D3QN-OPT/train10/q_target_prime.txt"
+            with open(q_value_save_path, 'a+') as f:
+                q_target_list = q_next.max(1)[0].view(self.batch_size, 1).tolist()
+                q_value = np.mean(q_target_list)
+                f.write(str(round(q_value, 3)) + "\n")
+                
+            # 将breward值保存到文件中
+            breward_save_path = f"backup/test-0517/D3QN-OPT/train10/breward.txt"
+            with open(breward_save_path, 'a+') as f:
+                breward_list = self.breward.tolist()
+                breward = np.mean(breward_list)
+                f.write(str(round(breward, 3)) + "\n")
+            
+            # 将Q值保存到文件中
+            q_value_save_path = f"backup/test-0517/D3QN-OPT/train10/q_value.txt"
+            with open(q_value_save_path, 'a+') as f:
+                q_target_list = q_target.tolist()
+                q_value = np.mean(q_target_list)
+                f.write(str(round(q_value, 3)) + "\n")
+
+            # 将loss保存到文件中
+            loss_save_path = f"backup/test-0517/D3QN-OPT/train10/loss.txt"
+            with open(loss_save_path, 'a+') as f:
+                f.write(str(round(loss.item(), 3)) + "\n")
 
         # 保存模型参数
         if self.step == self.max_step - 1:
@@ -436,24 +532,28 @@ class Dueling_DQN(nn.Module):
             nn.Linear(self.s_task_dim, 32),  # 全连接层，相当于tf.layers.dense，输入维度为3，输出维度为16，即16列
             torch.nn.Dropout(0.2),  # Dropout层
             nn.BatchNorm1d(32),  # 归一化层，参数为维度
+            # nn.Tanh(),
             nn.LeakyReLU(),  # 激活函数
         )
         self.layer1_1vm = nn.Sequential(  # 处理虚拟机状态
             nn.Linear(self.s_vm_dim, 64),
             torch.nn.Dropout(0.2),
             nn.BatchNorm1d(64),
+            # nn.Tanh(),
             nn.LeakyReLU(),
         )
         self.layer1_2vm = nn.Sequential(
             nn.Linear(64, 32),
             torch.nn.Dropout(0.2),
             nn.BatchNorm1d(32),
+            # nn.Tanh(),
             nn.LeakyReLU(),
         )
         self.layer2 = nn.Sequential(  # 融合处理结果
             nn.Linear(64, 32),
             torch.nn.Dropout(0.2),
             nn.BatchNorm1d(32),
+            # nn.Tanh(),
             nn.LeakyReLU(),
         )
         # Dueling DQN中不使用layer3
