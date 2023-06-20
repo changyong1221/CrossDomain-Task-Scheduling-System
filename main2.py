@@ -45,10 +45,9 @@ def inter_domain_scheduling(idx):
         multi_domain.add_domain(domain)
 
     # 6. load tasks
-    glo.records_num = 500000
+    glo.records_num = 300000
     glo.current_dataset = "Alibaba"
-    task_file_path = f"dataset/Alibaba/Alibaba-Cluster-trace-{glo.records_num}-multiple-test.txt"
-    # task_file_path = f"dataset/GoCJ/GoCJ_Dataset_{glo.records_num}batches_40concurrency_multiple_test.txt"
+    task_file_path = f"dataset/Alibaba/Alibaba-Cluster-trace-{glo.records_num}-IO-test.txt"
     task_batch_list = load_task_batches_from_file(task_file_path, delimiter='\t')
 
     # 7. set scheduler for multi-domain system
@@ -72,7 +71,7 @@ def inter_domain_scheduling(idx):
     glo.is_test = True
     
     machine_kind_num_list, machine_kind_idx_range_list = get_machine_kind_list(machine_list)
-
+    
     if idx == 0:
         scheduler = DQNScheduler(multi_domain.multidomain_id, machine_list, machine_num, task_batch_num, machine_kind_num_list,
                                  machine_kind_idx_range_list, is_federated=glo.is_federated, is_test=is_test, epsilon_decay=epsilon_dec, prob=prob, balance_prob=balance_prob)
@@ -101,9 +100,10 @@ def inter_domain_scheduling(idx):
 
 
 if __name__ == "__main__":
-    start_time = time.time()
-    glo.is_print_log = False
-    inter_domain_scheduling()
+    for i in range(0, 5):
+        start_time = time.time()
+        glo.is_print_log = False
+        inter_domain_scheduling(idx=i)
 
-    end_time = time.time()
-    print("Time used: %.2f s" % (end_time - start_time))
+        end_time = time.time()
+        print("Time used: %.2f s" % (end_time - start_time))

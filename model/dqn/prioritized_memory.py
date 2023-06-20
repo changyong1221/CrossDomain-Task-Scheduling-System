@@ -13,12 +13,19 @@ class Memory:  # stored as ( s, a, r, s_ ) in SumTree
         self.tree = SumTree(capacity)
         self.capacity = capacity
 
-    def _get_priority(self, error):
-        return (np.abs(error) + self.e) ** self.a
+    # def _get_priority(self, error):
+    #     return (np.abs(error) + self.e) ** self.a
 
-    def add(self, error, sample):
-        p = self._get_priority(error)
+    def _get_priority(self, reward):
+        return (np.abs(reward) + self.e) ** self.a
+
+    def add(self, reward, sample):
+        p = self._get_priority(reward)
         self.tree.add(p, sample)
+        
+    # def add(self, error, sample):
+    #     p = self._get_priority(error)
+    #     self.tree.add(p, sample)
 
     def sample(self, n):
         batch = []
@@ -46,6 +53,6 @@ class Memory:  # stored as ( s, a, r, s_ ) in SumTree
 
         return batch, idxs, is_weight
 
-    def update(self, idx, error):
-        p = self._get_priority(error)
-        self.tree.update(idx, p)
+    # def update(self, idx, error):
+    #     p = self._get_priority(error)
+    #     self.tree.update(idx, p)

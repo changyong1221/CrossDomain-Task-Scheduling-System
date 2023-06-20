@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-
+import sys
+sys.path.append("/home/scy/CrossDomain-Task-Scheduling-System")
 from utils.read_data import read_line_elems_from_file
 from utils.plt_config import PltConfig
 from utils.create_pic import save_to_histogram_from_list, save_to_pic_from_list
@@ -152,30 +153,38 @@ def analyze_gocj_test_dataset(file_path):
 
 def show_task_commit_distribution(file_path):
     data = pd.read_csv(file_path, delimiter='\t')
-    data.columns = ['task_id', 'commit_time', 'length', 'cpu_uti', 'size']
+    data.columns = ['id', 'commit_time', 'length', 'cpu_uti', 'size']
     commit_time_list = data['commit_time'].unique()
     batch_num = len(commit_time_list)
     print("batch_num: ", batch_num)
     commit_tasks_num_list = []
+    max_num = 0
     for i in range(batch_num):
         commit_tasks_num_list.append(len(data[data['commit_time'] == commit_time_list[i]]))
+        max_num = max(max_num, commit_tasks_num_list[i])
     print(len(commit_tasks_num_list))
     print(commit_tasks_num_list)
     avg_commit_tasks_num = len(data) / batch_num
     print("avg_commit_tasks_num: ", avg_commit_tasks_num)
+    print("max_num:", max_num)
 
     plt_config = PltConfig()
-    plt_config.title = "task commit concurrency on Alibaba Cluster Trace dataset"
-    plt_config.xlabel = "commit time"
-    plt_config.ylabel = "task commit concurrency"
-    save_path = "../pic/task_commit_concurrency/task_commit_concurrency_on_Alibaba_dataset_100000_test.png"
+    # plt_config.title = "task commit concurrency on Alibaba Cluster Trace dataset"
+    # plt_config.title = "Task submission concurrency on Alibaba training set"
+    # plt_config.title = "task commit concurrency on Alibaba testing set"
+    plt_config.xlabel = "提交时间"
+    plt_config.ylabel = "任务提交并发数"
+    # save_path = f"task_commit_concurrency_on_Alibaba_dataset_train.png"
+    save_path = f"task_commit_concurrency_on_Alibaba_dataset_train_2000000_1.png"
     save_to_pic_from_list(commit_tasks_num_list, save_path, plt_config, show=True)
 
 
 if __name__ == '__main__':
-    # filepath = "../dataset/GoCJ/GoCJ_Dataset_500batches_60concurrency_test.txt"
+    # filepath = "../dataset/GoCJ/GoCJ_Dataset_5000batches_40concurrency_test.txt"
+    # filepath = "../dataset/GoCJ/GoCJ_Dataset_1000batches_40concurrency_multiple_test.txt"
     # filepath = "../dataset/GoCJ/client/GoCJ_Dataset_2000_client_9.txt"
-    filepath = "../dataset/Alibaba/Alibaba-Cluster-trace-100000-test.txt"
+    # filepath = "../dataset/Alibaba/Alibaba-Cluster-trace-2000000-multiple-train.txt"
+    filepath = "../dataset/Alibaba/Alibaba-Cluster-trace-500000-multiple-test.txt"
     # filepath = "../dataset/Alibaba/Alibaba-Cluster-trace-5000-test.txt"
     # filepath = "../dataset/Alibaba/client/Alibaba-Cluster-trace-100000-client-0.txt"
     # analyze_dataset(filepath)

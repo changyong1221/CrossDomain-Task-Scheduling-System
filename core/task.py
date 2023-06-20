@@ -3,6 +3,7 @@ from utils.get_position import compute_distance_by_location
 from utils.file_check import check_and_build_dir
 from utils.log import print_log
 import globals.global_var as glo
+import numpy as np
 
 
 class Task(object):
@@ -34,7 +35,11 @@ class Task(object):
         """Return task size (bytes) of current task
         """
         return self.size
-
+    
+    def get_array_data(self):
+        """Return numpy array for task type prediction
+        """
+        return [self.mi, self.cpu_utilization, self.size]
 
 class TaskRunInstance(Task):
     def __init__(self, task_id, commit_time, mi, cpu_utilization, size):
@@ -45,6 +50,7 @@ class TaskRunInstance(Task):
         self.task_waiting_time = 0
         self.task_executing_time = 0
         self.task_processing_time = 0
+        self.task_type = "simple"
         self.is_done = False
 
     def run_on_machine(self, machine, multidomain_id):
@@ -57,7 +63,7 @@ class TaskRunInstance(Task):
                                                           machine.latitude,
                                                           glo.location_longitude,
                                                           glo.location_latitude) / glo.line_transmit_speed
-        # print_log(f"line_transmit_time: {line_transmit_time} s")
+        # print(f"line_transmit_time: {line_transmit_time} s")
         self.task_waiting_time += round(max(0, machine.get_transfer_finish_time() - self.commit_time))  # 等待开始传输
         self.task_transfer_time = round((self.size * 8) / machine.get_bandwidth() + line_transmit_time, 4)    # 任务传输时间
         machine.set_transfer_finish_time(self.commit_time + self.task_waiting_time + self.task_transfer_time)  # 更新机器的传输完成时间
@@ -66,6 +72,10 @@ class TaskRunInstance(Task):
         self.task_processing_time = self.task_transfer_time + self.task_waiting_time + self.task_executing_time     # 任务总的处理时间
         machine.set_execution_finish_time(self.commit_time + self.task_processing_time)
         scheduler_name = glo.current_scheduler
+        if self.task_executing_time > 2 * self.task_transfer_time:
+            self.task_type = "cpu-intensive"
+        elif self.task_transfer_time > 2 * self.task_executing_time:
+            self.task_type = "io-intensive"
         if glo.is_federated:
             output_dir = f"results/task_run_results/federated/client-{multidomain_id}/{glo.federated_round}"
             check_and_build_dir(output_dir)
@@ -75,19 +85,19 @@ class TaskRunInstance(Task):
                 check_and_build_dir(output_dir)
                 output_path = output_dir + f"/{scheduler_name}_task_run_results.txt"
                 # output_path = output_dir + f"/{scheduler_name}_task_run_results_test.txt"
-            output_list = [self.task_id, self.get_task_mi(), machine.get_machine_id(), machine.get_mips(),
+            output_list = [self.task_id, self.get_task_mi() / self.get_task_cpu_utilization(), self.get_task_size(), machine.get_machine_id(), machine.get_mips(),
                            self.task_transfer_time, self.task_waiting_time,
-                           self.task_executing_time, self.task_processing_time]
+                           self.task_executing_time, self.task_processing_time, self.task_type]
             write_list_to_file(output_list, output_path, mode='a+')
         else:
             output_dir = f"results/task_run_results/{glo.current_dataset}{glo.records_num}/{scheduler_name}/"
             if glo.current_batch_size != 0:
                 output_dir += f"{glo.current_batch_size}/"
             check_and_build_dir(output_dir)
-            output_path = output_dir + f"{scheduler_name}_task_run_results2.txt"
-            output_list = [self.task_id, self.get_task_mi(), machine.get_machine_id(), machine.get_mips(),
+            output_path = output_dir + f"{scheduler_name}_task_run_results.txt"
+            output_list = [self.task_id, self.get_task_mi() / self.get_task_cpu_utilization(), self.get_task_size(), machine.get_machine_id(), machine.get_mips(),
                            self.task_transfer_time, self.task_waiting_time,
-                           self.task_executing_time, self.task_processing_time]
+                           self.task_executing_time, self.task_processing_time, self.task_type]
             write_list_to_file(output_list, output_path, mode='a+')
         print_log(f"task({self.task_id}) finished, processing time: {round(self.task_processing_time, 4)} s")
         self.is_done = True
@@ -123,3 +133,8 @@ class TaskRunInstance(Task):
             return self.task_transfer_time
         else:
             return -1
+    
+    def get_task_type(self):
+        """Return task type
+        """
+        return self.task_type

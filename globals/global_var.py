@@ -18,7 +18,7 @@ task_run_results_path = None
 # dataset path
 current_dataset = "None"
 current_batch_size = 0
-machine_file_path = "dataset/create/machine.txt"
+machine_file_path = "dataset/create/machine_normal.txt"
 # task_file_path = "dataset/Alibaba/Alibaba-Cluster-trace-2000.txt"
 # task_file_path = "dataset/GoCJ/GoCJ_Dataset_20000_test.txt"
 

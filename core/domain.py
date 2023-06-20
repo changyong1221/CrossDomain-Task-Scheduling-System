@@ -149,6 +149,7 @@ class MultiDomain(object):
             self.set_scheduler(RoundRobinScheduler(len(self.machine_list)))
         if self.scheduler.__class__.__name__ == "RoundRobinScheduler":
             schedule_ret = self.scheduler.schedule(len(task_list))
+            print("RoundRobinScheduler schedule_ret: ", schedule_ret)
             for idx, machine_id in enumerate(schedule_ret):
                 self.machine_list[machine_id].add_task(task_list[idx])
 
@@ -156,6 +157,13 @@ class MultiDomain(object):
         elif self.scheduler.__class__.__name__ == "RandomScheduler":
             schedule_ret = self.scheduler.schedule(len(task_list))
             print("RandomScheduler schedule_ret: ", schedule_ret)
+            for idx, machine_id in enumerate(schedule_ret):
+                self.machine_list[machine_id].add_task(task_list[idx])
+
+            self.run_tasks()
+        elif self.scheduler.__class__.__name__ == "WeightedRandomScheduler":
+            schedule_ret = self.scheduler.schedule(len(task_list))
+            print("WeightedRandomScheduler schedule_ret: ", schedule_ret)
             for idx, machine_id in enumerate(schedule_ret):
                 self.machine_list[machine_id].add_task(task_list[idx])
 
@@ -177,7 +185,7 @@ class MultiDomain(object):
 
             self.run_tasks()
         elif self.scheduler.__class__.__name__ == "DQNScheduler":
-            schedule_ret = self.scheduler.schedule(task_list)
+            schedule_ret, is_net = self.scheduler.schedule(task_list)
             for idx, machine_id in enumerate(schedule_ret):
                 self.machine_list[machine_id].add_task(task_list[idx])
 
@@ -185,7 +193,7 @@ class MultiDomain(object):
             makespan = 0
             for machine in self.machine_list:
                 makespan = max(makespan, machine.get_batch_makespan())
-            self.scheduler.learn(task_list, schedule_ret, makespan)
+            self.scheduler.learn(task_list, schedule_ret, makespan, is_net)
         elif self.scheduler.__class__.__name__ == "DDPGScheduler":
             schedule_ret = self.scheduler.schedule(task_list, self.machine_list)
             for idx, machine_id in enumerate(schedule_ret):
@@ -244,7 +252,7 @@ class MultiDomain(object):
         """
         self.idle_machine_list.clear()
         for machine in self.machine_list:
-            if machine.get_finish_time() <= task_commit_time:
+            if machine.get_execution_finish_time() <= task_commit_time:
                 self.idle_machine_list.append(machine)
 
     def reset(self):

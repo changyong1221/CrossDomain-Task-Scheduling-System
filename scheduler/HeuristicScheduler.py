@@ -143,9 +143,11 @@ class HeuristicScheduler(Scheduler):
         # 计算makespan
         for machine_idx in machine_assigned_tasks.keys():
             length = 0
+            size = 0
             for task_idx in machine_assigned_tasks[machine_idx]:
-                length += self.task_list[task_idx].get_task_mi()
-            runtime = length / self.machine_list[machine_idx].get_mips()
+                length += (self.task_list[task_idx].get_task_mi() / self.task_list[task_idx].get_task_cpu_utilization())
+                size += self.task_list[task_idx].get_task_size()
+            runtime = length / self.machine_list[machine_idx].get_mips() + size / self.machine_list[machine_idx].get_bandwidth()
             if runtime > fitness:
                 fitness = runtime
         return fitness

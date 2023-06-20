@@ -13,15 +13,11 @@ from utils.log import print_log
 from utils.state_representation import balancing, get_machine_kind_idx, task_adapting
 import globals.global_var as glo
 
-GAMMA = 0.1  # reward discount，惩罚项
-TARGET_REPLACE_ITER = 5  # target update frequency，每过多少轮更新TargetNet
-
 
 class DQN(object):
     # 每次把一个任务分配给一个虚拟机
     def __init__(self, multidomain_id, task_dim, vms, vm_dim, machine_kind_num_list, machine_kind_idx_range_list,
-                 double_dqn=False, dueling_dqn=False, optimized_dqn=False,
-                 use_prioritized_memory=False, is_federated=False, epsilon_decay=0.998, prob=0.5, balance_prob=0.5, machine_weight_list=None):
+                 double_dqn=False, dueling_dqn=False, use_prioritized_memory=False, is_federated=False, is_test=False, epsilon_decay=0.998, prob=0.5, balance_prob=0.5, machine_mips_weight_list=None, machine_bandwidth_weight_list=None):
         self.multidomain_id = multidomain_id
         self.task_dim = task_dim  # 任务维度
         self.vms = vms  # 虚拟机数量
@@ -34,7 +30,6 @@ class DQN(object):
 
         self.double_dqn = double_dqn  # 是否使用double dqn，默认为False
         self.dueling_dqn = dueling_dqn  # 是否使用dueling dqn，默认为False
-        self.optimized_dqn = optimized_dqn  # 是否结合RG算法，默认为False
         self.use_prioritized_memory = use_prioritized_memory  # 是否使用prioritized memory，默认为False
 
         # prioritized memory replay专用参数
@@ -54,10 +49,18 @@ class DQN(object):
         self.max_step = 0
         self.target_prob = 1.0      # 学习目标算法的概率，若目标算法为fine grain，则有50%的几率在随机选择动作时以fine grain策略选择动作
         self.prob = prob
+        self.is_test = is_test
+        self.GAMMA = 0.3  # reward discount，惩罚项
+        
 
         # 均衡策略
-        self.machine_weight_list = machine_weight_list
-        self.accu_machine_weight_list = [np.sum(machine_weight_list[:i+1]) for i in range(len(machine_weight_list))]
+        # self.machine_weight_list = machine_weight_list
+        self.machine_mips_weight_list = machine_mips_weight_list
+        self.machine_bandwidth_weight_list = machine_bandwidth_weight_list
+        self.machine_weight_list = [((self.machine_mips_weight_list[i] + self.machine_bandwidth_weight_list[i]) * 0.5) for i in range(len(self.machine_mips_weight_list))]
+        self.accu_machine_weight_list = [np.sum(self.machine_weight_list[:i+1]) for i in range(len(self.machine_weight_list))]
+        self.accu_machine_mips_weight_list = [np.sum(self.machine_mips_weight_list[:i+1]) for i in range(len(self.machine_mips_weight_list))]
+        self.accu_machine_bandwidth_weight_list = [np.sum(self.machine_bandwidth_weight_list[:i+1]) for i in range(len(self.machine_bandwidth_weight_list))]
         self.machine_kind_num_list = machine_kind_num_list                  # 记录每类机器的数目
         self.machine_kind_idx_range_list = machine_kind_idx_range_list      # 记录每类机器的索引范围
         self.num_of_machine_kind = len(self.machine_kind_num_list)          # 按性能分类的机器种类数目
@@ -70,6 +73,7 @@ class DQN(object):
         self.balance_prob = balance_prob     # 小于balance_prob使用任务亲和度优化，大于balance_prob使用负载均衡优化
 
         if self.dueling_dqn:
+            self.TARGET_REPLACE_ITER = 5  # target update frequency，每过多少轮更新TargetNet
             self.eval_net = Dueling_DQN(self.s_task_dim, self.s_vm_dim, self.a_dim)
 
             # 打印网络结构参数
@@ -98,6 +102,7 @@ class DQN(object):
 
             self.loss_f = nn.MSELoss()
         else:
+            self.TARGET_REPLACE_ITER = 1  # target update frequency，每过多少轮更新TargetNet
             self.eval_net = QNet_v1(self.s_task_dim, self.s_vm_dim, self.a_dim)
 
             # 打印网络结构参数
@@ -126,12 +131,12 @@ class DQN(object):
             self.loss_f = nn.MSELoss()
 
         # try:
-        #     shutil.rmtree('dqn/logs/')  # 递归删除文件夹
+        #     shutil.rmtree('DQN/logs/')  # 递归删除文件夹
         # except:
         #     print_log("没有发现logs文件目录")
-        # self.writer = SummaryWriter("dqn/logs/")
+        # self.writer = SummaryWriter("DQN/logs/")
         # dummy_input = Variable(torch.rand(5, self.s_task_dim+self.s_vm_dim))
-        # with SummaryWriter(logdir="dqn/logs/graph", comment="Q_net") as w:
+        # with SummaryWriter(logdir="DQN/logs/graph", comment="Q_net") as w:
         #     w.add_graph(self.eval_net, (dummy_input))
 
     # 保存一个初始模型
@@ -139,40 +144,27 @@ class DQN(object):
         torch.save(self.eval_net.state_dict(), output_path)
 
     # 多个状态传入，给每个状态选择一个动作
-    def choose_action(self, s_list):
+    def choose_action(self, s_list, task_type, cpu_reward_weight_list, io_reward_weight_list, simple_reward_weight_list):
+        accu_cpu_reward_weight_list = [np.sum(cpu_reward_weight_list[:i+1]) for i in range(self.vms_num)]
+        accu_io_reward_weight_list = [np.sum(io_reward_weight_list[:i+1]) for i in range(self.vms_num)]
+        accu_simple_reward_weight_list = [np.sum(simple_reward_weight_list[:i+1]) for i in range(self.vms_num)]
+        
+        is_net = False
         if self.epsilon > self.epsilon_min:  # epsilon最小值
             self.epsilon *= self.epsilon_decay
         print("epsilon: ", self.epsilon)
+        action_prob_path = "backup/test-0529/D3QN-OPT/test6/action_prob.txt"
         if np.random.uniform() > self.epsilon:  # np.random.uniform()输出0到1之间的一个随机数
+            is_net = True
             self.eval_net.eval()    # 进入evaluate模式，区别于train模式，在eval模式，框架会自动把BatchNormalize和Dropout固定住，不会取平均，而是用训练好的值
             actions_value = self.eval_net(torch.from_numpy(s_list).float())
+            # print(f"actions_value:{actions_value}")
+            
             # 原始方式，直接根据最大值选择动作
             actions = torch.max(actions_value, 1)[1].data.numpy()
-
-            # adict = {}  # 标记每个VM出现次数，实现负载均衡
-            # s_task_num = len(s_list)
-            # # print(f"s_task_num: {s_task_num}")
-
-            # # 后面的代码增加分配VM的负载均衡，也是对动作的探索，融入了轮寻算法
-            # # print(f"before: {actions}")
-            # for i in range(s_task_num):
-            #     if actions[i] not in adict:
-            #         adict[actions[i]] = 1
-            #     else:
-            #         adict[actions[i]] += 1
-            # for i in range(s_task_num):
-            #     # 如果VM被分配的任务个数大于2，按后面的概率随机给任务分配VM
-            #     if adict[actions[i]] > int(s_task_num * self.machine_weight_list[actions[i]]):
-            #         adict[actions[i]] -= 1
-            #         rand_prob = np.random.uniform()
-            #         for j, prob in enumerate(self.accu_machine_weight_list):
-            #             if rand_prob <= prob:
-            #                 actions[i] = j
-            #                 break
-
-            #         # actions[i] = np.random.randint(self.vms_num)  # randint范围: [,]
-            # # print(f"after: {actions}")
-            print("net choose!")
+            # with open(action_prob_path, 'a+') as f:
+            #     f.write(f"actions_value:{actions_value}\nactions:{actions}\n")
+            # print("net choose!")
         else:
             # 加权负载均衡方法
             # action_list = [0 for i in range(len(s_list))]
@@ -217,36 +209,36 @@ class DQN(object):
             # print("balance choose!")
             
             # 随机分配法
-            # action_list = [0 for i in range(len(s_list))]
-            # for i, action in enumerate(action_list):
-            #     action_list[i] = np.random.randint(self.vms_num)
+            action_list = [0 for i in range(len(s_list))]
+            for i, action in enumerate(action_list):
+                action_list[i] = np.random.randint(self.vms_num)
             # print("random choose!")
             
             # 随机分配和阶梯平衡因子结合的方法
-            if self.step < 300:
-                action_list = [0 for i in range(len(s_list))]
-                for i, action in enumerate(action_list):
-                    action_list[i] = np.random.randint(self.vms_num)
-                print("random choose!")
-            else:
-                if np.random.random() > self.balance_prob:
-                    action_list = [0 for i in range(len(s_list))]
-                    for i, action in enumerate(action_list):
-                        action_list[i] = np.random.randint(self.vms_num)
-                    print("random choose!")
-                else:
-                    action_list = [0 for i in range(len(s_list))]
-                    for i, action in enumerate(action_list):
-                        action = balancing(self.machine_kind_avg_task_map, self.num_of_machine_kind,
-                                          self.machine_kind_idx_range_list, self.balance_factor_min,
-                                          self.balance_factor_max)
-                        action_list[i] = action
-                        self.machine_task_map[action] += 1
-                        kind_idx = get_machine_kind_idx(action, self.num_of_machine_kind, self.machine_kind_idx_range_list)
-                        self.machine_kind_task_map[kind_idx] += 1
-                        self.machine_kind_avg_task_map[kind_idx] = self.machine_kind_task_map[kind_idx] / \
-                                                                  self.machine_kind_num_list[kind_idx]
-                    print("balance choose!")
+            # if self.step < 300:
+            #     action_list = [0 for i in range(len(s_list))]
+            #     for i, action in enumerate(action_list):
+            #         action_list[i] = np.random.randint(self.vms_num)
+            #     print("random choose!")
+            # else:
+            #     if np.random.random() > self.balance_prob:
+            #         action_list = [0 for i in range(len(s_list))]
+            #         for i, action in enumerate(action_list):
+            #             action_list[i] = np.random.randint(self.vms_num)
+            #         print("random choose!")
+            #     else:
+            #         action_list = [0 for i in range(len(s_list))]
+            #         for i, action in enumerate(action_list):
+            #             action = balancing(self.machine_kind_avg_task_map, self.num_of_machine_kind,
+            #                               self.machine_kind_idx_range_list, self.balance_factor_min,
+            #                               self.balance_factor_max)
+            #             action_list[i] = action
+            #             self.machine_task_map[action] += 1
+            #             kind_idx = get_machine_kind_idx(action, self.num_of_machine_kind, self.machine_kind_idx_range_list)
+            #             self.machine_kind_task_map[kind_idx] += 1
+            #             self.machine_kind_avg_task_map[kind_idx] = self.machine_kind_task_map[kind_idx] / \
+            #                                                       self.machine_kind_num_list[kind_idx]
+            #         print("balance choose!")
 
             # if self.step < 1000:
             #     action_list = [0 for i in range(len(s_list))]
@@ -267,25 +259,79 @@ class DQN(object):
             #                                                   self.machine_kind_num_list[kind_idx]
             #     print("balance choose!")
             actions = np.array(action_list)
+        
+        
+        # 对动作进行负载均衡
+        if self.is_test or (np.random.uniform() > self.epsilon):
+            adict = {}  # 标记每个VM出现次数，实现负载均衡
+            s_task_num = len(s_list)
+            # print(f"s_task_num: {s_task_num}")
+    
+            # 后面的代码增加分配VM的负载均衡，也是对动作的探索，融入了加权随机算法
+            # print(f"before: {actions}")
+            for i in range(s_task_num):
+                if actions[i] not in adict:
+                    adict[actions[i]] = 1
+                else:
+                    adict[actions[i]] += 1
+            
+            # 按照预测任务类型进行动作的负载均衡
+            if task_type == 'simple':
+                for i in range(s_task_num):
+                    # 按后面的概率随机给任务分配VM
+                    if adict[actions[i]] > int(s_task_num * simple_reward_weight_list[actions[i]]):
+                        adict[actions[i]] -= 1
+                        rand_prob = np.random.uniform()
+                        for j, prob in enumerate(accu_simple_reward_weight_list):
+                            if rand_prob <= prob:
+                                actions[i] = j
+                                break
+            elif task_type == 'cpu-intensive':
+                for i in range(s_task_num):
+                    # 按后面的概率随机给任务分配VM
+                    if adict[actions[i]] > int(s_task_num * cpu_reward_weight_list[actions[i]]):
+                        adict[actions[i]] -= 1
+                        rand_prob = np.random.uniform()
+                        for j, prob in enumerate(accu_cpu_reward_weight_list):
+                            if rand_prob <= prob:
+                                actions[i] = j
+                                break
+            else:
+                for i in range(s_task_num):
+                    # 按后面的概率随机给任务分配VM
+                    if adict[actions[i]] > int(s_task_num * io_reward_weight_list[actions[i]]):
+                        adict[actions[i]] -= 1
+                        rand_prob = np.random.uniform()
+                        for j, prob in enumerate(accu_io_reward_weight_list):
+                            if rand_prob <= prob:
+                                actions[i] = j
+                                break
         print("actions: ", actions)
-        return actions
+        return actions, is_net
 
 
     # Prioritized DQN专用函数
     # save sample (error,<s,a,r,s'>) to the replay memory
     def append_sample(self, state, action, reward, next_state):
-        self.eval_net.eval()
-        target = self.eval_net(torch.from_numpy(np.array(state)).float()).detach()
-        old_val = target[0][torch.LongTensor(action)]
-        self.target_net.eval()
-        target_val = self.target_net(torch.from_numpy(np.array(next_state)).float()).detach()
-        new_val = torch.FloatTensor(reward)[0] + GAMMA * torch.max(target_val)
-        error = abs(old_val - new_val)
-        self.memory.add(error, (state, action, reward, next_state))
+        # self.eval_net.train()
+        # target = self.eval_net(torch.from_numpy(np.array(state)).float()).detach()
+        # old_val = target[0][torch.LongTensor(action)]
+        # self.target_net.eval()
+        # target_val = self.target_net(torch.from_numpy(np.array(next_state)).float()).detach()
+        # new_val = torch.FloatTensor(reward)[0] + GAMMA * torch.max(target_val)
+        # error = abs(old_val - new_val)
+        
+        # print(state)
+        # print(action)
+        # print(reward)
+        # print(next_state)
+        # exit()
+        self.memory.add(reward, (state, action, reward, next_state))
+
 
     def learn(self):
         # 更新 Target Net
-        if self.step % TARGET_REPLACE_ITER == 0:
+        if self.step % self.TARGET_REPLACE_ITER == 0:
             self.hard_update(self.target_net, self.eval_net)
 
         # Prioritized DQN单独处理
@@ -302,6 +348,14 @@ class DQN(object):
             self.bstate_ = torch.from_numpy(np.array(next_states, dtype=np.float32)).float()
             self.baction = torch.LongTensor(np.array(actions, dtype=np.float32))
             self.breward = torch.FloatTensor(np.array(rewards, dtype=np.float32))  # 奖励值值越大越好
+            # print(f"bstate:{self.bstate}")
+            # print(f"bstate_:{self.bstate_}")
+            # print(f"baction:{self.baction}")
+            # print(f"breward:{self.breward}")
+            # mdp_save_path = "backup/test-0529/D3QN-OPT/test6/mdp.txt"
+            # with open(mdp_save_path, 'a+') as f:
+            #     f.write(f"bstate:{self.bstate}\nbstate_:{self.bstate_}\nbaction:{self.baction}\nbreward:{self.breward}\n")
+            # exit()
 
             # 训练Q网络
             self.eval_net.train()
@@ -319,13 +373,13 @@ class DQN(object):
 
             # 然后用这个被Q_eval估计出来的动作来选择Q现实中的Q(s')
             q_target_prime = q_next.gather(1, q_eval_action)
-            q_target = self.breward + GAMMA * q_target_prime
+            q_target = self.breward + self.GAMMA * q_target_prime
 
-            # update priority
-            errors = torch.abs(q_eval - q_target).data.numpy()
-            for i in range(self.batch_size):
-                idx = idxs[i]
-                self.memory.update(idx, errors[i])
+            # update priority，不需要更新priority
+            # errors = torch.abs(q_eval - q_target).data.numpy()
+            # for i in range(self.batch_size):
+            #     idx = idxs[i]
+            #     self.memory.update(idx, errors[i])
 
             loss = (torch.FloatTensor(is_weights) * F.mse_loss(q_eval, q_target)).mean()
 
@@ -337,30 +391,30 @@ class DQN(object):
             self.optimizer.step()
             
             # 将Q值保存到文件中
-            q_value_save_path = f"backup/test-0517/D3QN-OPT/train11/q_target_prime.txt"
-            with open(q_value_save_path, 'a+') as f:
-                q_target_list = q_target_prime.tolist()
-                q_value = np.mean(q_target_list)
-                f.write(str(round(q_value, 3)) + "\n")
+            # q_value_save_path = f"backup/test-0529/D3QN-OPT/test6/q_target_prime.txt"
+            # with open(q_value_save_path, 'a+') as f:
+            #     q_target_list = q_target_prime.tolist()
+            #     q_value = np.mean(q_target_list)
+            #     f.write(str(round(q_value, 3)) + "\n")
                 
             # 将breward值保存到文件中
-            breward_save_path = f"backup/test-0517/D3QN-OPT/train11/breward.txt"
-            with open(breward_save_path, 'a+') as f:
-                breward_list = self.breward.tolist()
-                breward = np.mean(breward_list)
-                f.write(str(round(breward, 3)) + "\n")
+            # breward_save_path = f"backup/test-0529/D3QN-OPT/test6/breward.txt"
+            # with open(breward_save_path, 'a+') as f:
+            #     breward_list = self.breward.tolist()
+            #     breward = np.mean(breward_list)
+            #     f.write(str(round(breward, 3)) + "\n")
             
             # 将Q值保存到文件中
-            q_value_save_path = f"backup/test-0517/D3QN-OPT/train11/q_value.txt"
-            with open(q_value_save_path, 'a+') as f:
-                q_target_list = q_target.tolist()
-                q_value = np.mean(q_target_list)
-                f.write(str(round(q_value, 3)) + "\n")
+            # q_value_save_path = f"backup/test-0529/D3QN-OPT/test6/q_value.txt"
+            # with open(q_value_save_path, 'a+') as f:
+            #     q_target_list = q_target.tolist()
+            #     q_value = np.mean(q_target_list)
+            #     f.write(str(round(q_value, 3)) + "\n")
 
             # 将loss保存到文件中
-            loss_save_path = f"backup/test-0517/D3QN-OPT/train11/loss.txt"
-            with open(loss_save_path, 'a+') as f:
-                f.write(str(round(loss.item(), 3)) + "\n")
+            # loss_save_path = f"backup/test-0529/D3QN-OPT/test6/loss.txt"
+            # with open(loss_save_path, 'a+') as f:
+            #     f.write(str(round(loss.item(), 3)) + "\n")
         else:
             # 训练Q网络
             self.eval_net.train()
@@ -396,12 +450,12 @@ class DQN(object):
 
                 # 然后用这个被Q_eval估计出来的动作来选择Q现实中的Q(s')
                 q_target_prime = q_next.gather(1, q_eval_action)
-                q_target = self.breward + GAMMA * q_target_prime
+                q_target = self.breward + self.GAMMA * q_target_prime
                 loss = self.loss_f(q_eval, q_target)
 
             else:
                 # q_next.max(1)[0].view(self.batch_size, 1)是一个32行1列的向量
-                q_target = self.breward + GAMMA * q_next.max(1)[0].view(self.batch_size, 1)  # shape (batch, 1)
+                q_target = self.breward + self.GAMMA * q_next.max(1)[0].view(self.batch_size, 1)  # shape (batch, 1)
 
                 loss = self.loss_f(q_eval, q_target)
 
@@ -413,30 +467,30 @@ class DQN(object):
             self.optimizer.step()
             
             # 将Q值保存到文件中
-            q_value_save_path = f"backup/test-0517/D3QN-OPT/train11/q_target_prime.txt"
-            with open(q_value_save_path, 'a+') as f:
-                q_target_list = q_next.max(1)[0].view(self.batch_size, 1).tolist()
-                q_value = np.mean(q_target_list)
-                f.write(str(round(q_value, 3)) + "\n")
+            # q_value_save_path = f"backup/test-0529/D3QN-OPT/test6/q_target_prime.txt"
+            # with open(q_value_save_path, 'a+') as f:
+            #     q_target_list = q_next.max(1)[0].view(self.batch_size, 1).tolist()
+            #     q_value = np.mean(q_target_list)
+            #     f.write(str(round(q_value, 3)) + "\n")
                 
             # 将breward值保存到文件中
-            breward_save_path = f"backup/test-0517/D3QN-OPT/train11/breward.txt"
-            with open(breward_save_path, 'a+') as f:
-                breward_list = self.breward.tolist()
-                breward = np.mean(breward_list)
-                f.write(str(round(breward, 3)) + "\n")
+            # breward_save_path = f"backup/test-0529/D3QN-OPT/test6/breward.txt"
+            # with open(breward_save_path, 'a+') as f:
+            #     breward_list = self.breward.tolist()
+            #     breward = np.mean(breward_list)
+            #     f.write(str(round(breward, 3)) + "\n")
             
             # 将Q值保存到文件中
-            q_value_save_path = f"backup/test-0517/D3QN-OPT/train11/q_value.txt"
-            with open(q_value_save_path, 'a+') as f:
-                q_target_list = q_target.tolist()
-                q_value = np.mean(q_target_list)
-                f.write(str(round(q_value, 3)) + "\n")
+            # q_value_save_path = f"backup/test-0529/D3QN-OPT/test6/q_value.txt"
+            # with open(q_value_save_path, 'a+') as f:
+            #     q_target_list = q_target.tolist()
+            #     q_value = np.mean(q_target_list)
+            #     f.write(str(round(q_value, 3)) + "\n")
 
             # 将loss保存到文件中
-            loss_save_path = f"backup/test-0517/D3QN-OPT/train11/loss.txt"
-            with open(loss_save_path, 'a+') as f:
-                f.write(str(round(loss.item(), 3)) + "\n")
+            # loss_save_path = f"backup/test-0529/D3QN-OPT/test6/loss.txt"
+            # with open(loss_save_path, 'a+') as f:
+            #     f.write(str(round(loss.item(), 3)) + "\n")
 
         # 保存模型参数
         if self.step == self.max_step - 1:

@@ -5,51 +5,31 @@ import globals.global_var as glo
 
 
 # 通过任务和机器获取状态
-def get_state(task_list, machine_list, machine_assigned_task_list):
+def get_state(task_list, machine_list, machine_remain_time_weight_list):
     commit_time = task_list[0].commit_time  # 当前批次任务的开始时间
     machines_state = []
+
     for i, machine in enumerate(machine_list):
         machines_state.append(machine.get_mips() / 1000)
-        machines_state.append(max((machine.get_finish_time() - commit_time) / 1000, 0))  # 等待时间
-        machines_state.append(machine_assigned_task_list[i])    # 机器已分配任务数
+        machines_state.append(machine.get_bandwidth() / 100)
+        machines_state.append(machine_remain_time_weight_list[i])
+        # machines_state.append(math.log(max(machine.get_execution_finish_time() - commit_time, 1), 10))  # 机器剩余工作时间
+        # machines_state.append(math.log(max(commit_time - machine.get_execution_finish_time(), 1), 10))  # 机器已空闲时间
+        # machines_state.append(machine_assigned_task_list[i])    # 机器已分配任务数
         # if (machine.next_start_time - start_time > 0):
         #     print_log("machines_state: ", machines_state)
     # print("machines_state: ", machines_state)
     tasks_state = []
     for i, task in enumerate(task_list):
         task_state = []
-        task_state.append(task.get_task_mi() / 10000)
-        task_state.append(task.get_task_cpu_utilization())
-        task_state.append(task.get_task_mi() / machine_list[0].get_bandwidth() / 1000)  # 传输时间
+        task_state.append((task.get_task_mi() / task.get_task_cpu_utilization()) / 10000)
+        task_state.append(task.get_task_size() / 1000)  # 传输时间
         task_state += machines_state  # 由于是DQN，所以一个任务状态加上多个虚拟机状态
         tasks_state.append(task_state)
     # 返回值 [[[153.0, 0.79, 0.34, 600, 0, 600, 0, 500, 0, 500, 0, 400, 0, 400, 0, 300, 0, 300, 0, 200, 0, 200, 0]... ]]
         #           任务长度，任务利用率，任务传输时间，vm1_mips, vm1_waitTime, vm2....
     # print("tasks_state: ", tasks_state)
     return tasks_state
-
-
-
-# 精简状态
-# def get_state(task_list, machine_list):
-#     tasks_state = []
-#     for task in task_list:
-#         task_state = []
-#         def get_task_mi_kind(task_mi):
-#             if task_mi >= 525000:
-#                 return 5
-#             elif task_mi >= 150000:
-#                 return 4
-#             elif task_mi >= 101000:
-#                 return 3
-#             elif task_mi >= 59000:
-#                 return 2
-#             elif task_mi >= 15000:
-#                 return 1
-#         # task_state.append(get_task_mi_kind(task.get_task_mi()))
-#         task_state.append(task.get_task_mi())
-#         tasks_state.append(task_state)
-#     return tasks_state
 
 
 # 通过任务和机器获取状态
@@ -78,7 +58,7 @@ def get_ddpg_state(task_list, machine_list):
 
 
 # 根据机器性能计算各个机器对应的权值
-def get_machine_weight(machine_list):
+def get_machine_mips_weight(machine_list):
     # 定义数组用于存储最终结果
     machine_weight_list = [0 for i in range(len(machine_list))]
     # 所有机器的总mips
@@ -90,6 +70,22 @@ def get_machine_weight(machine_list):
     # 计算每个机器mips占总mips的比例
     for i, machine in enumerate(machine_list):
         machine_weight_list[i] = (float)(machine.mips) / total_mips
+    return machine_weight_list
+
+
+# 根据机器性能计算各个机器对应的权值
+def get_machine_bandwidth_weight(machine_list):
+    # 定义数组用于存储最终结果
+    machine_weight_list = [0 for i in range(len(machine_list))]
+    # 所有机器的总mips
+    total_bandwidth = 0
+    for machine in machine_list:
+        # print(f"machine.bandwidth: {machine.bandwidth}")
+        total_bandwidth += machine.bandwidth
+    # print("total_bandwidth: ", total_bandwidth)
+    # 计算每个机器bandwidth占总bandwidth的比例
+    for i, machine in enumerate(machine_list):
+        machine_weight_list[i] = (float)(machine.bandwidth) / total_bandwidth
     return machine_weight_list
 
 
@@ -119,11 +115,20 @@ def get_machine_kind_list(machine_list):
     high     [6000, 12000),
     very high [12000, 24000),
     extremely high [24000, +oo)
+    
+    very low [0, 800),
+    low      [800, 1600),
+    common   [1600, 3200),
+    high     [3200, 6400),
+    very high [6400, 12800),
+    extremely high [24000, +oo)
 
     """
     # 定义数组用于存储最终结果
-    num_of_machine_kind = 6
-    machine_kind_range_list = [24000, 12000, 6000, 2000, 800, 0]
+    # num_of_machine_kind = 6
+    # machine_kind_range_list = [24000, 12000, 6000, 2000, 800, 0]
+    num_of_machine_kind = 5
+    machine_kind_range_list = [12800, 6400, 3200, 1600, 800, 0]
     machine_kind_num_list = [0 for i in range(num_of_machine_kind)]      # 记录每类机器的数目
     machine_kind_idx_range_list = []    # 记录每类机器的索引范围
     # 机器性能阶梯表
